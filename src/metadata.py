@@ -12,7 +12,7 @@ load_dotenv()  # This loads variables from .env into os.environ
 TMDB_API_KEY = os.getenv('TMDB_KEY')
 
 
-def get_file_technical_specs(file_path: str) -> str:
+def get_file_technical_specs(file_path: Path) -> dict:
     cmd = [
         'ffprobe',
         '-v',
@@ -28,7 +28,7 @@ def get_file_technical_specs(file_path: str) -> str:
     return json.loads(result.stdout)
 
 
-def extract_local_info(file_path):
+def extract_local_info(file_path: Path):
     """Combines PTN and ffprobe into a clean local object."""
     specs = get_file_technical_specs(file_path)
     filename_info = PTN.parse(os.path.basename(file_path))
