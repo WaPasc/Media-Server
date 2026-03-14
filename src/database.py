@@ -6,10 +6,10 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 load_dotenv()
 
 POSTGRES_URL = os.getenv('POSTGRES_URL')
-ASYNC_URL = POSTGRES_URL.replace('postgresql://', 'postgresql+psycopg://')
+if not POSTGRES_URL:
+    raise ValueError('POSTGRES_URL not found in environment')
 
-if not ASYNC_URL:
-    raise ValueError('The database URL is not working')
+ASYNC_URL = POSTGRES_URL.replace('postgresql://', 'postgresql+psycopg://')
 
 # create_async_engine for async operations
 engine = create_async_engine(ASYNC_URL, echo=False)
