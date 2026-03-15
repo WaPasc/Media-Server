@@ -12,3 +12,7 @@ unfixable = ["B"]
 
 [tool.ruff.format]
 quote-style = "single"
+
+[tool.ruff.lint.flake8-bugbear]
+# Allow FastAPI Depends() as a default argument
+extend-immutable-calls = ["Depends", "fastapi.Depends"]
