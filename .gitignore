@@ -2,3 +2,4 @@
 venv
 Architecture*
 data_folder
+__pycache__
