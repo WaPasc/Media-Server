@@ -51,9 +51,10 @@ def extract_local_info(file_path: Path):
 
 
 if __name__ == '__main__':
-    metadata = extract_local_info(
-        Path(
-            '/home/wannes/Documents/coding/projects/streamService/data_folder/Suits (2011) Season 1-9 S01-S09 (1080p BluRay x265 HEVC 10bit AAC 5.1 ImE)/Season 03/Suits (2011) - S03E11 - Buried Secrets (1080p BluRay x265 ImE).mkv'
-        )
-    )
-    print(metadata)
+    import sys
+
+    if len(sys.argv) < 2:
+        print('Usage: python scanner.py /path/to/movie')
+    else:
+        metadata = extract_local_info(Path(sys.argv[1]))
+        print(metadata)
