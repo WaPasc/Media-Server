@@ -4,7 +4,7 @@ services:
     image: postgres:17-alpine
     restart: unless-stopped
     ports:
-      - "127.0.0.1:5432:5432" # review this when putting on home server
+      - "127.0.0.1:5432:5432" # TODO: review this when putting on home server
     environment:
       POSTGRES_USER: streamer
       POSTGRES_PASSWORD: streamerWP14!
