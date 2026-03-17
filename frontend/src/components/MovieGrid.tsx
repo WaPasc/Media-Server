@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { type Movie } from "../api";
 import logo from "../assets/logo-green-cyan.svg";
 
@@ -7,6 +8,11 @@ interface MovieGridProps {
 }
 
 export default function MovieGrid({ movies, onPlayMovie }: MovieGridProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredMovies = movies.filter((movie) =>
+    movie.title.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
   return (
     <div className="min-h-screen bg-[#09090B] text-white p-6 md:p-12">
       <div className="flex items-center gap-4 mb-10">
@@ -16,8 +22,18 @@ export default function MovieGrid({ movies, onPlayMovie }: MovieGridProps) {
         </h1>
       </div>
 
+      <div className="mb-8">
+        <input
+          type="text"
+          placeholder="Search movies..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full max-w-md px-5 py-3 bg-neutral-900 border border-neutral-800 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all shadow-inner"
+        />
+      </div>
+
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-        {movies.map((movie) => (
+        {filteredMovies.map((movie) => (
           <div
             key={movie.id}
             onClick={() => onPlayMovie(movie)}
