@@ -27,7 +27,7 @@ export default function VideoPlayer({ movie, onBack }: VideoPlayerProps) {
 
   return (
     <div className="min-h-screen bg-black flex flex-col relative">
-      <div className="p-6 flex items-center gap-6 absolute top-0 left-0 w-full z-10 bg-gradient-to-b from-black/90 to-transparent">
+      <div className="p-6 flex items-center gap-6 absolute top-0 left-0 w-full z-10 bg-linear-to-b from-black/90 to-transparent">
         <button
           onClick={onBack}
           className="group flex items-center gap-2 px-4 py-2 text-neutral-400 hover:text-white transition-colors"
