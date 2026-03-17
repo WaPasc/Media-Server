@@ -92,6 +92,14 @@ class TMDBClient:
     async def get_tv_show(self, tv_show_id):
         return await self._get(f'/tv/{tv_show_id}')
 
+    async def get_tv_season(self, tv_show_id, season_number):
+        return await self._get(f'/tv/{tv_show_id}/season/{season_number}')
+
+    async def get_tv_episode(self, tv_show_id, season_number, episode_number):
+        return await self._get(
+            f'/tv/{tv_show_id}/season/{season_number}/episode/{episode_number}'
+        )
+
     async def search_tv_show(self, query, page=1):
         params = {'query': query, 'page': page}
         return await self._get('/search/tv', params)
