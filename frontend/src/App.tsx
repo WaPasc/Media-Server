@@ -1,11 +1,16 @@
+// frontend/src/App.tsx
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchMovies, type Movie } from "./api";
 import MovieGrid from "./components/MovieGrid";
+import MovieDetails from "./components/MovieDetails";
 import VideoPlayer from "./components/VideoPlayer";
 
 function App() {
-  const [playingMovie, setPlayingMovie] = useState<Movie | null>(null);
+  // The movie the user clicked on to view details
+  const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
+  // Did they click the Play button on the details screen?
+  const [isWatching, setIsWatching] = useState<boolean>(false);
 
   const {
     data: movies = [],
@@ -47,18 +52,32 @@ function App() {
     );
   }
 
-  return (
-    <div className="bg-[#09090B] min-h-screen font-sans selection:bg-indigo-500 selection:text-white">
-      {playingMovie ? (
-        <VideoPlayer
-          movie={playingMovie}
-          onBack={() => setPlayingMovie(null)}
-        />
-      ) : (
-        <MovieGrid movies={movies} onPlayMovie={setPlayingMovie} />
-      )}
-    </div>
-  );
+  // Routing Logic
+
+  // The user is actively watching the video
+  if (isWatching && selectedMovie) {
+    return (
+      <VideoPlayer
+        movie={selectedMovie}
+        // When they click back from the video, they go back to the Details page
+        onBack={() => setIsWatching(false)}
+      />
+    );
+  }
+
+  // The user is looking at the movie details
+  if (selectedMovie) {
+    return (
+      <MovieDetails
+        movie={selectedMovie}
+        onBack={() => setSelectedMovie(null)}
+        onPlay={() => setIsWatching(true)}
+      />
+    );
+  }
+
+  // Default: The user is browsing the grid
+  return <MovieGrid movies={movies} onPlayMovie={setSelectedMovie} />;
 }
 
 export default App;
