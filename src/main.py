@@ -161,9 +161,7 @@ async def get_show_details(
 async def stream_video(
     file_id: int, range: str = Header(None), db: AsyncSession = Depends(get_db)
 ):
-    """Streams a video file in chunks using HTTP Range Requests."""
-
-    # Look up the file path in the database
+    """Streams video files. Natively streams MP4/WebM, and live-transcodes MKV."""
     stmt = select(MediaFile).where(MediaFile.id == file_id)
     result = await db.execute(stmt)
     media_file = result.scalars().first()
@@ -172,6 +170,62 @@ async def stream_video(
         raise HTTPException(status_code=404, detail='Media file not found on disk')
 
     file_path = media_file.file_path
+
+    # ==========================================
+    # ROUTE A: THE MKV TRANSCODER (FFMPEG)
+    # ==========================================
+    if file_path.lower().endswith('.mkv'):
+
+        async def ffmpeg_streamer():
+            # The Magic Command:
+            # -c:v libx264 -preset ultrafast: Encodes video extremely fast
+            # -c:a aac: Converts audio to web-safe AAC
+            # -movflags frag_keyframe+empty_moov: Crucial! Allows MP4 to stream before it's finished
+            command = [
+                'ffmpeg',
+                '-i',
+                file_path,
+                '-c:v',
+                'libx264',
+                '-preset',
+                'faster',  # Slower than ultrafast, but much better quality
+                '-crf',
+                '18',  # <--- Visually lossless quality (18-22 is the golden range)
+                '-c:a',
+                'aac',
+                '-b:a',
+                '320k',  # <--- Cinematic audio
+                '-movflags',
+                'frag_keyframe+empty_moov+faststart',
+                '-f',
+                'mp4',
+                '-',
+            ]
+
+            process = await asyncio.create_subprocess_exec(
+                *command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL,  # Hides FFmpeg logs from your terminal
+            )
+
+            try:
+                while True:
+                    # Read in 1MB chunks from FFmpeg's output
+                    chunk = await process.stdout.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    yield chunk
+            finally:
+                # If the user closes the browser or clicks "Stop Playback", kill FFmpeg!
+                if process.returncode is None:
+                    process.kill()
+
+        # Return the live stream. Status 200 (OK) because we aren't handling byte ranges for live transcodes yet.
+        return StreamingResponse(ffmpeg_streamer(), media_type='video/mp4')
+
+    # ==========================================
+    # ROUTE B: NATIVE STREAMING (MP4 / WebM)
+    # ==========================================
     file_size = os.path.getsize(file_path)
 
     # Parse the Range header (e.g., "bytes=0-")
@@ -213,7 +267,7 @@ async def stream_video(
 
     # Fallback if system doesn't recognize the extension
     if not content_type:
-        content_type = 'application/octect-stream'
+        content_type = 'application/octet-stream'
 
     headers = {
         'Content-Range': f'bytes {start}-{end}/{file_size}',
