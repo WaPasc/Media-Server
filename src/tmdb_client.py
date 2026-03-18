@@ -147,3 +147,6 @@ class TMDBClient:
 
     def get_backdrop_url(self, path, size='w780'):
         return self.build_image_url(path, size)
+
+    def get_still_url(self, path, size='w300'):
+        return self.build_image_url(path, size)

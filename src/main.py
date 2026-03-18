@@ -147,6 +147,7 @@ async def get_show_details(
                         'title': ep.title,
                         'overview': ep.overview,
                         'file_id': ep.files[0].id if ep.files else None,
+                        'still_url': tmdb_client.get_still_url(ep.still_path),
                     }
                     for ep in season.episodes
                 ],
