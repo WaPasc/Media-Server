@@ -1,11 +1,13 @@
 import asyncio
 import logging
 from pathlib import Path
+from typing import Any
 
+from sqlalchemy import func
 from sqlalchemy.future import select
 
 from database import AsyncSessionLocal
-from db_models import MediaFile, Movie
+from db_models import Episode, MediaFile, Movie, Season, TVShow
 from metadata import extract_local_info
 from tmdb_client import TMDBClient
 
@@ -13,6 +15,44 @@ logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
 
 ALLOWED_EXTENSIONS = {'.mp4', '.mkv', '.avi', '.webm'}
+
+
+def _normalize_title(value: str) -> str:
+    return ' '.join(value.lower().strip().split())
+
+
+def _coerce_positive_int(value: Any) -> int | None:
+    if isinstance(value, (list, tuple)):
+        value = value[0] if value else None
+
+    if value is None:
+        return None
+
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+
+    return parsed if parsed > 0 else None
+
+
+def _coerce_non_negative_int(value: Any) -> int | None:
+    if isinstance(value, (list, tuple)):
+        value = value[0] if value else None
+
+    if value is None:
+        return None
+
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+
+    return parsed if parsed >= 0 else None
+
+
+def _build_show_cache_key(title_key: str, year: int | None) -> tuple[str, int | None]:
+    return (title_key, year)
 
 
 async def process_movie_file(file_path: Path, session, tmdb: TMDBClient):
@@ -106,10 +146,285 @@ async def scan_movies_directory(movies_dir: str):
                         await session.rollback()  # Protect the database on failure
 
 
+async def process_tv_file(
+    file_path: Path,
+    session,
+    tmdb: TMDBClient,
+    cache: dict[str, dict[Any, Any]],
+):
+    abs_path = str(file_path.absolute())
+
+    # Check if already in database
+    stmt = select(MediaFile).where(MediaFile.file_path == abs_path)
+    result = await session.execute(stmt)
+    if result.scalars().first():
+        return  # Silently skip already scanned files to reduce log spam
+
+    # Extract title + season/episode + technical data
+    local_info = await asyncio.to_thread(extract_local_info, abs_path)
+    show_title = local_info.get('title')
+    season_number = _coerce_non_negative_int(local_info.get('season'))
+    episode_number = _coerce_positive_int(local_info.get('episode'))
+    local_year = _coerce_positive_int(local_info.get('year'))
+
+    if not show_title or season_number is None or episode_number is None:
+        logger.warning(f'Could not parse S/E from filename: {file_path.name}')
+        return
+
+    # Initialize our safe caches
+    shows_by_title = cache.setdefault('shows_by_title', {})
+    seasons_by_key = cache.setdefault('seasons_by_key', {})
+    tmdb_seasons = cache.setdefault('tmdb_seasons', {})  # Caches TMDB API payloads!
+
+    title_key = _normalize_title(show_title)
+    show_cache_key = _build_show_cache_key(title_key, local_year)
+
+    # 1. HANDLE TV SHOW (Using Safe Dictionary Caching)
+    cached_show = shows_by_title.get(show_cache_key)
+
+    # If year-specific key was not found, fall back to title-only bucket.
+    if not cached_show:
+        cached_show = shows_by_title.get(_build_show_cache_key(title_key, None))
+
+    if cached_show:
+        show_id = cached_show['id']
+        show_tmdb_id = cached_show['tmdb_id']
+    else:
+        # Check Database
+        stmt = select(TVShow).where(func.lower(TVShow.title) == show_title.lower())
+        result = await session.execute(stmt)
+        tv_candidates = result.scalars().all()
+
+        tv_show = next(
+            (
+                candidate
+                for candidate in tv_candidates
+                if local_year is not None and candidate.year == local_year
+            ),
+            tv_candidates[0] if tv_candidates else None,
+        )
+
+        if not tv_show:
+            # Check TMDB
+            search_payload = await tmdb.search_tv_show(
+                show_title, first_air_date_year=local_year
+            )
+            search_results = search_payload.get('results', [])
+
+            if not search_results and local_year:
+                search_payload = await tmdb.search_tv_show(show_title)
+                search_results = search_payload.get('results', [])
+
+            if not search_results:
+                logger.warning(f'No TMDB results found for TV show: {show_title}')
+                return
+
+            best_match = next(
+                (
+                    c
+                    for c in search_results[:5]
+                    if _normalize_title(c.get('name', '')) == title_key
+                ),
+                search_results[0],
+            )
+
+            show_tmdb_id = best_match['id']
+            show_data = await tmdb.get_tv_show(show_tmdb_id)
+
+            first_air_date = show_data.get('first_air_date') or best_match.get(
+                'first_air_date'
+            )
+            parsed_year = (
+                int(first_air_date[:4])
+                if first_air_date and first_air_date[:4].isdigit()
+                else local_year
+            )
+
+            tv_show = TVShow(
+                tmdb_id=show_tmdb_id,
+                title=show_data.get('name', show_title),
+                year=parsed_year,
+                overview=show_data.get('overview') or best_match.get('overview'),
+                poster_path=show_data.get('poster_path')
+                or best_match.get('poster_path'),
+                backdrop_path=show_data.get('backdrop_path')
+                or best_match.get('backdrop_path'),
+            )
+            session.add(tv_show)
+            await session.flush()
+
+        show_id = tv_show.id
+        show_tmdb_id = tv_show.tmdb_id
+
+        # Handle legacy rows where tmdb_id is missing and recover it safely.
+        if not show_tmdb_id:
+            search_payload = await tmdb.search_tv_show(
+                show_title, first_air_date_year=local_year
+            )
+            search_results = search_payload.get('results', [])
+
+            if not search_results and local_year:
+                search_payload = await tmdb.search_tv_show(show_title)
+                search_results = search_payload.get('results', [])
+
+            if search_results:
+                best_match = next(
+                    (
+                        c
+                        for c in search_results[:5]
+                        if _normalize_title(c.get('name', '')) == title_key
+                    ),
+                    search_results[0],
+                )
+                show_tmdb_id = best_match['id']
+                tv_show.tmdb_id = show_tmdb_id
+                await session.flush()
+            else:
+                logger.warning(
+                    f'No TMDB id found for existing TV show: {show_title}. Skipping file.'
+                )
+                return
+
+        # Cache only primitive IDs to avoid ORM object lifecycle issues.
+        shows_by_title[show_cache_key] = {'id': show_id, 'tmdb_id': show_tmdb_id}
+        shows_by_title[_build_show_cache_key(title_key, None)] = {
+            'id': show_id,
+            'tmdb_id': show_tmdb_id,
+        }
+
+    # 2. HANDLE SEASON
+    season_key = (show_id, season_number)
+    cached_season_id = seasons_by_key.get(season_key)
+
+    if cached_season_id:
+        season_id = cached_season_id
+    else:
+        stmt = select(Season).where(
+            Season.show_id == show_id, Season.season_number == season_number
+        )
+        result = await session.execute(stmt)
+        season = result.scalars().first()
+
+        if not season:
+            # Fetch and CACHE the TMDB Season Payload so we can reuse it for episodes!
+            tmdb_season_key = f'{show_tmdb_id}_{season_number}'
+            if tmdb_season_key not in tmdb_seasons:
+                tmdb_seasons[tmdb_season_key] = await tmdb.get_tv_season(
+                    show_tmdb_id, season_number
+                )
+
+            season_data = tmdb_seasons[tmdb_season_key]
+
+            season = Season(
+                show_id=show_id,
+                tmdb_id=season_data.get('id'),
+                season_number=season_number,
+                title=season_data.get('name', f'Season {season_number}'),
+                overview=season_data.get('overview'),
+                poster_path=season_data.get('poster_path'),
+            )
+            session.add(season)
+            await session.flush()
+
+        season_id = season.id
+        seasons_by_key[season_key] = season_id
+
+    # 3. HANDLE EPISODE (Using TMDB cache)
+    stmt = select(Episode).where(
+        Episode.season_id == season_id, Episode.episode_number == episode_number
+    )
+    result = await session.execute(stmt)
+    episode = result.scalars().first()
+
+    if not episode:
+        # Check if we already downloaded this season's payload
+        tmdb_season_key = f'{show_tmdb_id}_{season_number}'
+        if tmdb_season_key not in tmdb_seasons:
+            tmdb_seasons[tmdb_season_key] = await tmdb.get_tv_season(
+                show_tmdb_id, season_number
+            )
+
+        # Pluck the exact episode out of the season dictionary (Zero API calls made!)
+        season_payload = tmdb_seasons[tmdb_season_key]
+        ep_data = next(
+            (
+                ep
+                for ep in season_payload.get('episodes', [])
+                if ep.get('episode_number') == episode_number
+            ),
+            None,
+        )
+
+        episode = Episode(
+            season_id=season_id,
+            tmdb_id=ep_data.get('id') if ep_data else None,
+            season_number=season_number,
+            episode_number=episode_number,
+            title=ep_data.get('name', f'Episode {episode_number}')
+            if ep_data
+            else f'Episode {episode_number}',
+            overview=ep_data.get('overview') if ep_data else None,
+            still_path=ep_data.get('still_path') if ep_data else None,
+        )
+        session.add(episode)
+        await session.flush()
+
+    # 4. HANDLE MEDIA FILE
+    media_file = MediaFile(
+        file_path=abs_path,
+        duration=local_info.get('duration'),
+        codec=local_info.get('codec'),
+        resolution=local_info.get('resolution'),
+        episode_id=episode.id,
+    )
+    session.add(media_file)
+    await session.commit()
+    logger.info(f'Added: {show_title} - S{season_number:02d}E{episode_number:02d}')
+
+
+async def scan_tv_shows_directory(tv_shows_dir: str):
+    """Walks the TV shows directory and orchestrates the scanning."""
+    root_path = Path(tv_shows_dir)
+
+    if not root_path.exists() or not root_path.is_dir():
+        logger.error(f'Directory not found: {tv_shows_dir}')
+        return
+
+    async with TMDBClient() as tmdb:
+        async with AsyncSessionLocal() as session:
+            cache: dict[str, dict[Any, Any]] = {
+                'shows_by_title': {},
+                'seasons_by_key': {},
+            }
+            for file_path in root_path.rglob('*'):
+                if (
+                    file_path.is_file()
+                    and file_path.suffix.lower() in ALLOWED_EXTENSIONS
+                ):
+                    try:
+                        await process_tv_file(file_path, session, tmdb, cache)
+                    except Exception as e:
+                        logger.error(f'Error processing {file_path.name}: {e}')
+                        await session.rollback()
+
+
 if __name__ == '__main__':
     import sys
 
     if len(sys.argv) < 2:
-        print('Usage: python scanner.py /path/to/movies')
-    else:
+        print('Usage: python scanner.py [movies|tv] /path/to/library')
+        print('Example: python scanner.py tv /path/to/tv_shows')
+    elif len(sys.argv) == 2:
+        # Backward compatibility with previous behavior.
         asyncio.run(scan_movies_directory(sys.argv[1]))
+    else:
+        mode = sys.argv[1].lower().strip()
+        path = sys.argv[2]
+
+        if mode in {'movies', 'movie'}:
+            asyncio.run(scan_movies_directory(path))
+        elif mode in {'tv', 'shows', 'tv_shows'}:
+            asyncio.run(scan_tv_shows_directory(path))
+        else:
+            print(f'Unknown mode: {mode}')
+            print('Use one of: movies, tv')

@@ -100,8 +100,18 @@ class TMDBClient:
             f'/tv/{tv_show_id}/season/{season_number}/episode/{episode_number}'
         )
 
-    async def search_tv_show(self, query, page=1):
+    async def search_tv_show(
+        self,
+        query,
+        page=1,
+        first_air_date_year=None,
+        year=None,
+    ):
         params = {'query': query, 'page': page}
+        if first_air_date_year:
+            params['first_air_date_year'] = first_air_date_year
+        if year:
+            params['year'] = year
         return await self._get('/search/tv', params)
 
     async def get_tv_show_credits(self, tv_show_id):
