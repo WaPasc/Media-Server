@@ -1,27 +1,37 @@
 // frontend/src/App.tsx
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { fetchMovies, type Movie } from "./api";
-import MovieGrid from "./components/MovieGrid";
-import MovieDetails from "./components/MovieDetails";
-import VideoPlayer from "./components/VideoPlayer";
+import { fetchMovies, fetchShows, type Media, type Movie } from "./api";
+import { VideoPlayer } from "./components/VideoPlayer";
+import { MovieDetails } from "./components/MovieDetails";
+import { ShowDetails } from "./components/ShowDetails";
+import { MediaGrid } from "./components/MediaGrid";
 
-function App() {
-  // The movie the user clicked on to view details
-  const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
-  // Did they click the Play button on the details screen?
-  const [isWatching, setIsWatching] = useState<boolean>(false);
+export default function App() {
+  const [activeTab, setActiveTab] = useState<"movies" | "shows">("movies");
+  
+  // The currently clicked poster (Movie or Show)
+  const [selectedMedia, setSelectedMedia] = useState<Media | null>(null);
+  
+  // The specific file to stream and its display title
+  const [playingMedia, setPlayingMedia] = useState<{fileId: number, title: string} | null>(null);
 
-  const {
-    data: movies = [],
-    isLoading,
-    isError,
-    error,
-  } = useQuery({
+  const { data: movies = [], isLoading: loadingMovies, isError: isMovieError } = useQuery({
     queryKey: ["movies"],
     queryFn: fetchMovies,
     retry: 2,
   });
+
+  const { data: shows = [], isLoading: loadingShows, isError: isShowError } = useQuery({
+    queryKey: ["shows"],
+    queryFn: fetchShows,
+    retry: 2,
+  });
+
+  const isLoading = loadingMovies || loadingShows;
+  const isError = isMovieError || isShowError;
+
+  // --- ROUTING LOGIC ---
 
   if (isLoading) {
     return (
@@ -35,16 +45,9 @@ function App() {
     return (
       <div className="min-h-screen bg-[#09090B] flex flex-col items-center justify-center text-white p-6 text-center">
         <div className="bg-rose-950/20 border border-rose-900/50 p-8 rounded-2xl max-w-lg">
-          <h2 className="text-2xl font-bold text-rose-500 mb-4">
-            Connection Failed
-          </h2>
-          <p className="text-neutral-300 mb-6">
-            {error instanceof Error ? error.message : "Network error"}
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-6 py-2 bg-rose-600 hover:bg-rose-700 rounded-lg transition-colors"
-          >
+          <h2 className="text-2xl font-bold text-rose-500 mb-4">Connection Failed</h2>
+          <p className="text-neutral-300 mb-6">Could not connect to the media server.</p>
+          <button onClick={() => window.location.reload()} className="px-6 py-2 bg-rose-600 hover:bg-rose-700 rounded-lg transition-colors">
             Try Again
           </button>
         </div>
@@ -52,32 +55,82 @@ function App() {
     );
   }
 
-  // Routing Logic
-
-  // The user is actively watching the video
-  if (isWatching && selectedMovie) {
+  // 1. Watching a Video (Movie or Episode)
+  if (playingMedia) {
     return (
       <VideoPlayer
-        movie={selectedMovie}
-        // When they click back from the video, they go back to the Details page
-        onBack={() => setIsWatching(false)}
+        fileId={playingMedia.fileId}
+        title={playingMedia.title}
+        onBack={() => setPlayingMedia(null)}
       />
     );
   }
 
-  // The user is looking at the movie details
-  if (selectedMovie) {
+  // 2. Looking at Details
+  if (selectedMedia) {
+    // Type Guard: Does it have a file_id property? If so, it's a Movie!
+    if ("file_id" in selectedMedia) {
+      return (
+        <MovieDetails
+          movie={selectedMedia as Movie}
+          onBack={() => setSelectedMedia(null)}
+          onPlay={(fileId, title) => setPlayingMedia({ fileId, title })}
+        />
+      );
+    }
+    
+    // Otherwise, it's a TV Show!
     return (
-      <MovieDetails
-        movie={selectedMovie}
-        onBack={() => setSelectedMovie(null)}
-        onPlay={() => setIsWatching(true)}
+      <ShowDetails
+        show={selectedMedia}
+        onBack={() => setSelectedMedia(null)}
+        onPlay={(fileId, title) => setPlayingMedia({ fileId, title })}
       />
     );
   }
 
-  // Default: The user is browsing the grid
-  return <MovieGrid movies={movies} onPlayMovie={setSelectedMovie} />;
-}
+  // 3. Browsing the Grid (Main Menu)
+  return (
+    <div className="bg-[#09090B] min-h-screen font-sans selection:bg-indigo-500 selection:text-white flex flex-col">
+      {/* Header / Brand */}
+      <div className="flex items-center justify-center md:justify-start gap-4 p-6 md:px-12 pt-10">
+        <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500 tracking-wide">
+          My Media Server
+        </h1>
+      </div>
 
-export default App;
+      {/* Navigation Tabs */}
+      <div className="flex justify-center gap-8 py-2 border-b border-neutral-800/80 mb-6">
+        <button
+          onClick={() => setActiveTab("movies")}
+          className={`text-lg font-bold transition-all px-2 py-4 relative ${
+            activeTab === "movies" ? "text-white" : "text-neutral-500 hover:text-neutral-300"
+          }`}
+        >
+          Movies
+          {activeTab === "movies" && (
+            <div className="absolute bottom-0 left-0 w-full h-1 bg-linear-to-r from-indigo-500 to-purple-500 rounded-t-full" />
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab("shows")}
+          className={`text-lg font-bold transition-all px-2 py-4 relative ${
+            activeTab === "shows" ? "text-white" : "text-neutral-500 hover:text-neutral-300"
+          }`}
+        >
+          TV Shows
+          {activeTab === "shows" && (
+            <div className="absolute bottom-0 left-0 w-full h-1 bg-linear-to-r from-purple-500 to-pink-500 rounded-t-full" />
+          )}
+        </button>
+      </div>
+
+      {/* Grid Content */}
+      <MediaGrid
+        items={activeTab === "movies" ? movies : shows}
+        onItemClick={setSelectedMedia}
+        activeTab={activeTab}
+      />
+    </div>
+  );
+}
