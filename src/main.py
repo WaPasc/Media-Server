@@ -160,7 +160,10 @@ async def get_show_details(
 
 @app.get('/api/stream/{file_id}')
 async def stream_video(
-    file_id: int, range: str = Header(None), db: AsyncSession = Depends(get_db)
+    file_id: int,
+    direct_play: bool = False,
+    range: str = Header(None),
+    db: AsyncSession = Depends(get_db),
 ):
     """Streams video files. Natively streams MP4/WebM, and live-transcodes MKV."""
     stmt = select(MediaFile).where(MediaFile.id == file_id)
@@ -175,7 +178,7 @@ async def stream_video(
     # ==========================================
     # ROUTE A: THE MKV TRANSCODER (FFMPEG)
     # ==========================================
-    if file_path.lower().endswith('.mkv'):
+    if file_path.lower().endswith('.mkv') and not direct_play:
 
         async def ffmpeg_streamer():
             # The Magic Command:
