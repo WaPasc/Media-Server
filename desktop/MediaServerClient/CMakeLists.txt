@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Quick)
 
+# Find mpv
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(MPV REQUIRED mpv)
+
 qt_standard_project_setup(REQUIRES 6.10)
 
 qt_add_executable(appMediaServerClient
@@ -31,7 +35,9 @@ set_target_properties(appMediaServerClient PROPERTIES
 
 target_link_libraries(appMediaServerClient
     PRIVATE Qt6::Quick
+    PRIVATE ${MPV_LIBRARIES}
 )
+target_include_directories(appMediaServerClient PRIVATE ${MPV_INCLUDE_DIRS})
 
 install(TARGETS appMediaServerClient
     BUNDLE DESTINATION .
