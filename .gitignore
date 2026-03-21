@@ -3,3 +3,4 @@ venv
 Architecture*
 data_folder
 __pycache__
+**/build
