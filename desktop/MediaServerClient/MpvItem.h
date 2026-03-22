@@ -28,6 +28,7 @@ signals:
     // mpv decodes frames on its own background threads, it uses
     // this signal to tell Qt GUI thread that there is a new frame
     void onUpdate();
+    void ready(); // call when openGL canvast is built
 
 // receiver for signals
 private slots:

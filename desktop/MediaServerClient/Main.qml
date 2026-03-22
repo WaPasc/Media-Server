@@ -14,8 +14,8 @@ Window {
         id: videoPlayer
         anchors.fill: parent // Tell it to fill the entire window
 
-        // This runs the exact millisecond the UI finishes loading
-        Component.onCompleted: {
+        // Wait until C++ background thread tells us canvas is built
+        onReady: {
             // call Q_INVOKABLE C++ function from JavaScript!
             // standard open-source test video URL
             videoPlayer.command(["loadfile", "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"]);

@@ -45,6 +45,9 @@ public:
 
             // Tell mpv to call our redraw function whenever a frame is ready
             mpv_render_context_set_update_callback(item->mpv_gl, MpvItem::on_mpv_redraw, item);
+
+            // Tell QML that GPU canvas is built
+            QMetaObject::invokeMethod(item, "ready", Qt::QueuedConnection);
         }
 
         return QQuickFramebufferObject::Renderer::createFramebufferObject(size);
