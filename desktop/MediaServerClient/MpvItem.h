@@ -30,10 +30,15 @@ signals:
     void onUpdate();
     void ready(); // call when openGL canvast is built
 
+    void timeChanged(double time);
+    void durationChanged(double duration);
+
 // receiver for signals
 private slots:
     // tells Qt to update the screen
     void doUpdate();
+
+    void processMpvEvents();
 
 private:
     mpv_handle *mpv;
@@ -41,6 +46,9 @@ private:
 
     // static callback function that mpv can call from any thread
     static void on_mpv_redraw(void *ctx);
+
+    static void on_mpv_wakeup(void *ctx);
+    void handleMpvEvent(mpv_event *event);
 
     // MpvRenderer friend so the background render thread
     // is allowed to acces our private mpv pointers.

@@ -98,6 +98,11 @@ MpvItem::MpvItem(QQuickItem *parent)
     // Enable Hardware Acceleration (VAAPI/NVDEC) for your Linux GPU!
     mpv_set_option_string(mpv, "hwdec", "auto");
 
+    mpv_observe_property(mpv, 0, "time-pos", MPV_FORMAT_DOUBLE);
+    mpv_observe_property(mpv, 0, "duration", MPV_FORMAT_DOUBLE);
+
+    mpv_set_wakeup_callback(mpv, on_mpv_wakeup, this);
+
     if (mpv_initialize(mpv) < 0)
         throw std::runtime_error("could not initialize mpv context");
 
@@ -132,6 +137,41 @@ void MpvItem::doUpdate()
     update();
 }
 
+// Called from any background thread when mpv has a new event (like a clock tick)
+void MpvItem::on_mpv_wakeup(void *ctx)
+{
+    MpvItem *self = static_cast<MpvItem *>(ctx);
+    // Safely ask the main GUI thread to process the events
+    QMetaObject::invokeMethod(self, "processMpvEvents", Qt::QueuedConnection);
+}
+
+// Runs on the GUI Thread. Empties the mpv event queue.
+void MpvItem::processMpvEvents()
+{
+    while (mpv) {
+        mpv_event *event = mpv_wait_event(mpv, 0);
+        if (event->event_id == MPV_EVENT_NONE) break; // Queue is empty
+        handleMpvEvent(event);
+    }
+}
+
+// Translates raw C properties into QML signals
+void MpvItem::handleMpvEvent(mpv_event *event)
+{
+    if (event->event_id == MPV_EVENT_PROPERTY_CHANGE) {
+        mpv_event_property *prop = static_cast<mpv_event_property *>(event->data);
+
+        // Did the current time change?
+        if (strcmp(prop->name, "time-pos") == 0 && prop->format == MPV_FORMAT_DOUBLE) {
+            emit timeChanged(*(double *)prop->data);
+        }
+        // Did the total duration change?
+        else if (strcmp(prop->name, "duration") == 0 && prop->format == MPV_FORMAT_DOUBLE) {
+            emit durationChanged(*(double *)prop->data);
+        }
+    }
+}
+
 // --- JAVASCRIPT EXPOSED FUNCTIONS ---
 
 // Allows us to call myVideo.command(["loadfile", "movie.mkv"]) from QML
@@ -154,3 +194,4 @@ void MpvItem::setProperty(const QString &name, const QVariant &value)
     QByteArray valueBytes = value.toString().toUtf8();
     mpv_set_property_string(mpv, nameBytes.constData(), valueBytes.constData());
 }
+
