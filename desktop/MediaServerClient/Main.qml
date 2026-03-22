@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Window
-import MediaServerClient // This is the module name we defined in CMakeLists.txt!
+import MediaServerClient // This is the module name defined in CMakeLists.txt
 
 Window {
     width: 1280
@@ -16,9 +16,21 @@ Window {
 
         // Wait until C++ background thread tells us canvas is built
         onReady: {
-            // call Q_INVOKABLE C++ function from JavaScript!
+            // call Q_INVOKABLE C++ function from JavaScript
             // standard open-source test video URL
             videoPlayer.command(["loadfile", "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"]);
+        }
+
+        // A simple invisible click area over the whole video
+        MouseArea {
+            anchors.fill: parent
+            property bool isPaused: false
+
+            onClicked: {
+                isPaused = !isPaused;
+                // This routes directly to C++ setProperty function
+                videoPlayer.setProperty("pause", isPaused ? "yes" : "no");
+            }
         }
     }
 }
