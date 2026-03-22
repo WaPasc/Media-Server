@@ -64,7 +64,8 @@ public:
             0
         };
 
-        int flip_y{1}; // make sure (0,0) is the top-left corner instead of bottom-left
+        // make sure have the right flip for y so the video is not flipped around y-axis
+        int flip_y{0};
 
         mpv_render_param params[] = {
             {MPV_RENDER_PARAM_OPENGL_FBO, &mpfbo},
