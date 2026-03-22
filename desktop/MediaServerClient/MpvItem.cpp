@@ -86,6 +86,10 @@ MpvItem::MpvItem(QQuickItem *parent)
 {
     if (!mpv) throw std::runtime_error("could not create mpv context");
 
+    // Debugging
+    mpv_set_option_string(mpv, "terminal", "yes");
+    mpv_set_option_string(mpv, "msg-level", "all=info");
+
     // Tell mpv to output video via our custom OpenGL bridge
     mpv_set_option_string(mpv, "vo", "libmpv");
     // Enable Hardware Acceleration (VAAPI/NVDEC) for your Linux GPU!
