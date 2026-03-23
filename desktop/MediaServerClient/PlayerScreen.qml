@@ -1,0 +1,160 @@
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+import MediaServerClient
+
+Item {
+    id: root
+
+    // Signals to talk to Main.qml
+    signal backClicked
+    signal fullscreenRequested
+
+    property bool cursorVisible: true
+
+    // Public functions to control the player from the outside
+    function playVideo(url) {
+        videoPlayer.command(["loadfile", url]);
+    }
+
+    function stopVideo() {
+        videoPlayer.command(["stop"]);
+    }
+
+    function formatTime(timeInSeconds) {
+        if (isNaN(timeInSeconds) || timeInSeconds < 0)
+            return "00:00";
+        let h = Math.floor(timeInSeconds / 3600);
+        let m = Math.floor((timeInSeconds % 3600) / 60);
+        let s = Math.floor(timeInSeconds % 60);
+        let mStr = (m < 10 ? "0" : "") + m;
+        let sStr = (s < 10 ? "0" : "") + s;
+        return (h > 0) ? (h + ":" + mStr + ":" + sStr) : (mStr + ":" + sStr);
+    }
+
+    MouseArea {
+        anchors.fill: parent
+        hoverEnabled: true
+        acceptedButtons: Qt.NoButton
+        onPositionChanged: {
+            cursorVisible = true;
+            controlBar.opacity = 1.0;
+            hideTimer.restart();
+        }
+    }
+
+    MouseArea {
+        anchors.fill: parent
+        enabled: false
+        cursorShape: cursorVisible ? Qt.ArrowCursor : Qt.BlankCursor
+    }
+
+    Timer {
+        id: hideTimer
+        interval: 3000
+        running: root.visible
+        onTriggered: {
+            if (!videoPlayer.isPaused) {
+                controlBar.opacity = 0.0;
+                cursorVisible = false;
+            }
+        }
+    }
+
+    MpvVideo {
+        id: videoPlayer
+        anchors.fill: parent
+        property double currentTime: 0
+        property double totalDuration: 0
+        property bool isPaused: false
+
+        onTimeChanged: time => {
+            currentTime = time;
+            if (!seekSlider.pressed)
+                seekSlider.value = time;
+        }
+
+        onDurationChanged: duration => {
+            totalDuration = duration;
+            seekSlider.to = duration;
+        }
+
+        TapHandler {
+            onTapped: {
+                videoPlayer.isPaused = !videoPlayer.isPaused;
+                videoPlayer.setProperty("pause", videoPlayer.isPaused ? "yes" : "no");
+                if (videoPlayer.isPaused) {
+                    controlBar.opacity = 1.0;
+                    hideTimer.stop();
+                    cursorVisible = true;
+                } else {
+                    hideTimer.restart();
+                }
+            }
+            onDoubleTapped: root.fullscreenRequested()
+        }
+    }
+
+    Rectangle {
+        id: controlBar
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 60
+        color: "#CC000000"
+        opacity: 1.0
+
+        Behavior on opacity {
+            NumberAnimation {
+                duration: 150
+            }
+        }
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.margins: 15
+            spacing: 15
+
+            Button {
+                text: "← Back"
+                onClicked: {
+                    root.stopVideo();
+                    root.backClicked(); // Tell Main.qml we want to go back!
+                }
+            }
+
+            Button {
+                text: videoPlayer.isPaused ? "Play" : "Pause"
+                onClicked: {
+                    videoPlayer.isPaused = !videoPlayer.isPaused;
+                    videoPlayer.setProperty("pause", videoPlayer.isPaused ? "yes" : "no");
+                }
+            }
+
+            Text {
+                text: formatTime(videoPlayer.currentTime)
+                color: "white"
+                font.pixelSize: 16
+            }
+
+            Slider {
+                id: seekSlider
+                Layout.fillWidth: true
+                from: 0
+                onMoved: videoPlayer.command(["seek", seekSlider.value, "absolute"])
+            }
+
+            Text {
+                text: formatTime(videoPlayer.totalDuration)
+                color: "white"
+                font.pixelSize: 16
+            }
+
+            Button {
+                icon.name: "fullscreen"
+                icon.source: "fullscreen.svg"
+                onClicked: root.fullscreenRequested()
+            }
+        }
+    }
+}
