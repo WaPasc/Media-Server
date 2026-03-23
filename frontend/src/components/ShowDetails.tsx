@@ -40,17 +40,25 @@ export function ShowDetails({ show, onBack, onPlay }: ShowDetailsProps) {
 
   return (
     <div className="min-h-screen bg-[#09090B] text-white relative overflow-hidden animate-in fade-in duration-500">
-      <div className="absolute inset-0 pointer-events-none">
-        {show.backdrop_url ? (
-          <img
-            src={show.backdrop_url}
-            alt={show.title}
-            className="h-[55vh] w-full object-cover opacity-25"
-          />
-        ) : (
-          <div className="h-[55vh] w-full bg-neutral-900" />
-        )}
-        <div className="absolute inset-0 bg-linear-to-t from-[#09090B] via-[#09090B]/75 to-[#09090B]/20" />
+      <div className="absolute inset-0 pointer-events-none flex justify-center bg-[#09090B]">
+        {/* Increased to 1920px (standard 1080p width) so it feels much wider */}
+        <div className="relative w-full max-w-440 h-[60vh]">
+          {show.backdrop_url ? (
+            <img
+              src={show.backdrop_url}
+              alt={show.title}
+              className="w-full h-full object-cover object-top opacity-35"
+            />
+          ) : (
+            <div className="w-full h-full bg-neutral-900 opacity-25" />
+          )}
+
+          {/* 1. Vertical Bottom Fade: Starts solid black at 0%, hits 60% opacity at 40% height, then fades to clear */}
+          <div className="absolute inset-0 bg-[linear-gradient(to_top,#09090B_0%,rgba(9,9,11,0.6)_40%,transparent_100%)]" />
+
+          {/* 2. Horizontal Edge Fade: Pushes the fade strictly to the outer 15% of the left and right edges */}
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#09090B_0%,transparent_15%,transparent_85%,#09090B_100%)]" />
+        </div>
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-12 pt-[22vh] pb-20">
@@ -78,7 +86,7 @@ export function ShowDetails({ show, onBack, onPlay }: ShowDetailsProps) {
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="rounded-2xl border border-white/10 bg-neutral-900/60 backdrop-blur-md p-4 sm:p-5">
+            <div className="rounded-2xl border border-white/10 bg-neutral-900/10 backdrop-blur-md p-4 sm:p-5">
               <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
                 <div>
                   <label
@@ -116,7 +124,7 @@ export function ShowDetails({ show, onBack, onPlay }: ShowDetailsProps) {
             {!activeSeason ? (
               <div className="text-neutral-400">No season data available.</div>
             ) : (
-              <div className="rounded-3xl border border-white/10 bg-neutral-900/45 p-5 sm:p-6">
+              <div className="rounded-3xl border border-white/10 bg-neutral-900/10 p-5 sm:p-6">
                 <h2 className="text-2xl font-semibold text-white mb-5">
                   Season {activeSeason.season_number}
                 </h2>

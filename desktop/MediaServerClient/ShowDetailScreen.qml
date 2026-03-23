@@ -80,39 +80,66 @@ Item {
         anchors.fill: parent
         color: "#09090B"
 
-        Image {
+        Item {
             anchors.top: parent.top
-            anchors.left: parent.left
-            anchors.right: parent.right
-            height: parent.height * 0.55 // 55vh
-            source: backdropUrl
-            fillMode: Image.PreserveAspectCrop
-            opacity: 0.25
-        }
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: Math.min(parent.width, 1600) // Max width for ultra-wide monitors
+            height: parent.height * 0.60 // Slightly taller (60vh)
 
-        Rectangle {
-            anchors.top: parent.top
-            anchors.left: parent.left
-            anchors.right: parent.right
-            height: parent.height * 0.55
-            gradient: Gradient {
-                GradientStop {
-                    position: 0.0
-                    color: "transparent"
+            Image {
+                anchors.fill: parent
+                source: backdropUrl
+                fillMode: Image.PreserveAspectCrop
+                verticalAlignment: Image.AlignTop // Pins the top of the image
+                opacity: 0.35
+            }
+
+            // Vertical Fade (Hides the harsh bottom edge)
+            Rectangle {
+                anchors.fill: parent
+                gradient: Gradient {
+                    GradientStop {
+                        position: 0.0
+                        color: "transparent"
+                    }
+                    GradientStop {
+                        position: 0.60
+                        color: "#AA09090B"
+                    }
+                    GradientStop {
+                        position: 1.0
+                        color: "#09090B"
+                    }
                 }
-                GradientStop {
-                    position: 0.75
-                    color: "#BF09090B"
-                }
-                GradientStop {
-                    position: 1.0
-                    color: "#09090B"
+            }
+
+            // Horizontal Fade (Blends the left/right edges into the black background)
+            Rectangle {
+                anchors.fill: parent
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop {
+                        position: 0.0
+                        color: "#09090B"
+                    }
+                    GradientStop {
+                        position: 0.15
+                        color: "transparent"
+                    }
+                    GradientStop {
+                        position: 0.85
+                        color: "transparent"
+                    }
+                    GradientStop {
+                        position: 1.0
+                        color: "#09090B"
+                    }
                 }
             }
         }
     }
 
-    // --- MAIN SCROLLING CONTENT ---
+    // MAIN SCROLLING CONTENT
     ScrollView {
         anchors.fill: parent
         contentWidth: availableWidth
@@ -245,7 +272,7 @@ Item {
                 Repeater {
                     model: episodeModel
 
-                    //FLATTENED EPISODE CARD
+                    // FLATTENED EPISODE CARD
                     Rectangle {
                         // Responsive logic: 1 col on small screens, 2 cols on large (minus the 16px gap)
                         width: episodeFlow.width < 900 ? episodeFlow.width : (episodeFlow.width - 16) / 2
