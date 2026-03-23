@@ -9,7 +9,7 @@ Window {
     title: "Pop!_OS Media Player"
     color: "black"
 
-    property bool isPlayingMedia: false
+    property string currentScreen: "library"
 
     function toggleFullscreen() {
         if (mainWindow.visibility === Window.FullScreen) {
@@ -31,24 +31,51 @@ Window {
     LibraryScreen {
         id: library
         anchors.fill: parent
-        visible: !isPlayingMedia
+        visible: currentScreen === "library"
 
         // Catch the signal from LibraryScreen.qml
         onMovieSelected: streamUrl => {
             player.playVideo(streamUrl);
-            isPlayingMedia = true;
+            currentScreen = "player";
+        }
+
+        onShowSelected: showId => {
+            showDetail.showId = showId; // Pass ID to details screen
+            currentScreen = "showDetail"; // Swap screens
+        }
+    }
+
+    ShowDetailScreen {
+        id: showDetail
+        anchors.fill: parent
+        visible: currentScreen === "showDetail"
+
+        onBackClicked: {
+            currentScreen = "library";
+        }
+
+        onEpisodeSelected: streamUrl => {
+            player.playVideo(streamUrl);
+            currentScreen = "player";
         }
     }
 
     PlayerScreen {
         id: player
         anchors.fill: parent
-        visible: isPlayingMedia
+        visible: currentScreen === "player"
 
-        // Catch the signals from PlayerScreen.qml
         onBackClicked: {
-            isPlayingMedia = false;
-            mainWindow.showNormal();
+            // if we were watching a show, go back to the episode list
+            if (showDetail.showId !== -1 && showDetail.visible === false) {
+                currentScreen = "showDetail";
+            } else {
+                currentScreen = "library";
+            }
+
+            if (mainWindow.visibility === Window.FullScreen) {
+                mainWindow.visibility = preFullscreenState;
+            }
         }
         onFullscreenRequested: {
             toggleFullscreen();

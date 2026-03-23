@@ -1,32 +1,40 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Layouts
 
 Item {
     id: root
 
     // This signal acts as our outbound "event"
     signal movieSelected(string streamUrl)
+    signal showSelected(int showId)
+
+    property string currentMode: "movies"
 
     ListModel {
-        id: videoModel
+        id: mediaModel
     }
 
-    Component.onCompleted: fetchVideosFromBackend()
+    Component.onCompleted: fetchMedia()
 
-    function fetchVideosFromBackend() {
-        videoModel.clear();
+    function fetchMedia() {
+        mediaModel.clear();
         var xhr = new XMLHttpRequest();
-        xhr.open("GET", "http://127.0.0.1:8000/api/movies");
+        let endpoint = (currentMode === "movies") ? "/api/movies" : "/api/shows";
+        xhr.open("GET", "http://127.0.0.1:8000" + endpoint);
+
         xhr.onreadystatechange = function () {
             if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
-                let movies = JSON.parse(xhr.responseText);
-                for (let i = 0; i < movies.length; i++) {
-                    if (movies[i].file_id !== null) {
-                        videoModel.append({
-                            "title": movies[i].title,
-                            "posterUrl": movies[i].poster_url || "",
-                            "fileId": movies[i].file_id,
-                            "year": movies[i].year
+                let data = JSON.parse(xhr.responseText);
+                for (let i = 0; i < data.length; i++) {
+                    // For movies, file_id must be valid. For shows, we just need the show id.
+                    if (currentMode === "shows" || data[i].file_id !== null) {
+                        mediaModel.append({
+                            "mediaId": data[i].id,
+                            "title": data[i].title,
+                            "posterUrl": data[i].poster_url || "",
+                            "fileId": data[i].file_id || 0,
+                            "year": data[i].year || ""
                         });
                     }
                 }
@@ -35,10 +43,40 @@ Item {
         xhr.send();
     }
 
+    RowLayout {
+        id: topBar
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 60
+        anchors.margins: 20
+        spacing: 20
+
+        Button {
+            text: "Movies"
+            highlighted: currentMode === "movies"
+            onClicked: {
+                currentMode = "movies";
+                fetchMedia();
+            }
+        }
+        Button {
+            text: "TV Shows"
+            highlighted: currentMode === "shows"
+            onClicked: {
+                currentMode = "shows";
+                fetchMedia();
+            }
+        }
+    }
+
     GridView {
-        anchors.fill: parent
+        anchors.top: topBar.bottom
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
         anchors.margins: 40
-        model: videoModel
+        model: mediaModel
         cellWidth: 220
         cellHeight: 330
 
@@ -71,9 +109,14 @@ Item {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
-                    let streamUrl = "http://127.0.0.1:8000/api/stream/" + model.fileId + "?direct_play=true";
-                    // Emit the signal, passing the URL out of this component!
-                    root.movieSelected(streamUrl);
+                    if (currentMode === "movies") {
+                        let streamUrl = "http://127.0.0.1:8000/api/stream/" + model.fileId + "?direct_play=true";
+                        // Emit the signal, passing the URL out of this component!
+                        root.movieSelected(streamUrl);
+                    } else {
+                        // It's a TV Show, pass the ID
+                        root.showSelected(model.mediaId);
+                    }
                 }
             }
         }
