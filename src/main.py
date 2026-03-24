@@ -255,7 +255,6 @@ async def stream_video(
         raise HTTPException(status_code=416, detail='Requested Range Not Satisfiable')
 
     # Limit the chunk size so we don't overload the server's RAM
-    end = min(start + CHUNK_SIZE - 1, end)
     content_length = end - start + 1
 
     # Create a generator to stream the file chunk from disk
