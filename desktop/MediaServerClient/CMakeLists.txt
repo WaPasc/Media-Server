@@ -16,10 +16,19 @@ qt_add_executable(appMediaServerClient
     main.cpp
 )
 
+set_source_files_properties(Theme.qml PROPERTIES
+    QT_QML_SINGLETON_TYPE TRUE
+)
+
 qt_add_qml_module(appMediaServerClient
     URI MediaServerClient
     QML_FILES
         Main.qml
+        LibraryScreen.qml
+        PlayerScreen.qml
+        ShowDetailScreen.qml
+        Theme.qml
+
 
     SOURCES
         MpvItem.h
@@ -27,10 +36,7 @@ qt_add_qml_module(appMediaServerClient
 
     RESOURCES
         fullscreen.svg
-        QML_FILES LibraryScreen.qml
-        QML_FILES PlayerScreen.qml
-        QML_FILES ShowDetailScreen.qml
-        QML_FILES Theme.qml
+
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
