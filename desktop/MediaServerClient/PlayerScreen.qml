@@ -216,6 +216,24 @@ Item {
             }
 
             Button {
+                text: "CC"
+                font.bold: true
+                palette.buttonText: Theme.textTitle
+                background: Rectangle {
+                    color: "transparent"
+                    border.color: parent.hovered ? Theme.accent : "transparent"
+                    radius: 6
+                }
+                onClicked: {
+                    // This tells mpv to switch to the next subtitle track, or turn them off
+                    videoPlayer.command(["cycle", "sub"]);
+
+                    // Optional: Show a quick on-screen message so the user knows it changed
+                    videoPlayer.command(["show-text", "Subtitles cycled"]);
+                }
+            }
+
+            Button {
                 icon.name: "fullscreen"
                 icon.source: "fullscreen.svg"
                 onClicked: root.fullscreenRequested()
