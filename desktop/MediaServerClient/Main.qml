@@ -25,7 +25,10 @@ Window {
     }
     Shortcut {
         sequence: "Esc"
-        onActivated: mainWindow.showNormal()
+        onActivated: {
+            mainWindow.showNormal()
+            library.forceActiveFocus()
+        }
     }
 
     LibraryScreen {

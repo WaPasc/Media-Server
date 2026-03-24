@@ -30,6 +30,7 @@ qt_add_qml_module(appMediaServerClient
         QML_FILES LibraryScreen.qml
         QML_FILES PlayerScreen.qml
         QML_FILES ShowDetailScreen.qml
+        QML_FILES Theme.qml
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.

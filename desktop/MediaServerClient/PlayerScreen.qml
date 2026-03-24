@@ -6,6 +6,8 @@ import MediaServerClient
 Item {
     id: root
 
+    focus: true
+
     // Signals to talk to Main.qml
     signal backClicked
     signal fullscreenRequested
@@ -13,6 +15,19 @@ Item {
     property bool cursorVisible: true
 
     property int currentFileId: -1
+
+    Keys.onSpacePressed: {
+        videoPlayer.isPaused = !videoPlayer.isPaused;
+        videoPlayer.setProperty("pause", videoPlayer.isPaused ? "yes" : "no");
+
+        if (videoPlayer.isPaused) {
+            controlBar.opacity = 1.0;
+            hideTimer.stop();
+            cursorVisible = true;
+        } else {
+            hideTimer.restart();
+        }
+    }
 
     // Public functions to control the player from the outside
     function playVideo(url, fileId) {
@@ -151,7 +166,7 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         height: 60
-        color: "#CC000000"
+        color: Theme.bgOverlay
         opacity: 1.0
 
         Behavior on opacity {
@@ -183,7 +198,7 @@ Item {
 
             Text {
                 text: formatTime(videoPlayer.currentTime)
-                color: "white"
+                color: Theme.textTitle
                 font.pixelSize: 16
             }
 
@@ -196,7 +211,7 @@ Item {
 
             Text {
                 text: formatTime(videoPlayer.totalDuration)
-                color: "white"
+                color: Theme.textTitle
                 font.pixelSize: 16
             }
 

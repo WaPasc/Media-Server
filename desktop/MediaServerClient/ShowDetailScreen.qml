@@ -1,5 +1,7 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Layouts
+import MediaServerClient
 
 Item {
     id: root
@@ -78,7 +80,7 @@ Item {
     // STATIC BACKGROUND
     Rectangle {
         anchors.fill: parent
-        color: "#09090B"
+        color: Theme.bgBase
 
         Item {
             anchors.top: parent.top
@@ -104,11 +106,11 @@ Item {
                     }
                     GradientStop {
                         position: 0.60
-                        color: "#AA09090B"
+                        color: Theme.bgBaseFade
                     }
                     GradientStop {
                         position: 1.0
-                        color: "#09090B"
+                        color: Theme.bgBase
                     }
                 }
             }
@@ -120,7 +122,7 @@ Item {
                     orientation: Gradient.Horizontal
                     GradientStop {
                         position: 0.0
-                        color: "#09090B"
+                        color: Theme.bgBase
                     }
                     GradientStop {
                         position: 0.15
@@ -132,7 +134,7 @@ Item {
                     }
                     GradientStop {
                         position: 1.0
-                        color: "#09090B"
+                        color: Theme.bgBase
                     }
                 }
             }
@@ -159,12 +161,12 @@ Item {
             Button {
                 text: "← Back to Library"
                 font.pixelSize: 16
-                palette.buttonText: "#D4D4D8"
+                palette.buttonText: Theme.textHover
                 background: Item {}
                 onClicked: root.backClicked()
                 contentItem: Text {
                     text: parent.text
-                    color: parent.hovered ? "white" : "#D4D4D8"
+                    color: parent.hovered ? Theme.textTitle : Theme.textHover
                     font: parent.font
                 }
             }
@@ -177,7 +179,7 @@ Item {
             // Title & Overview
             Text {
                 text: showTitle
-                color: "white"
+                color: Theme.textTitle
                 font.pixelSize: 56
                 font.bold: true
                 width: parent.width
@@ -191,7 +193,7 @@ Item {
 
             Text {
                 text: overview
-                color: "#D4D4D8"
+                color: Theme.textHover
                 font.pixelSize: 18
                 width: Math.min(parent.width, 800) // max-w-3xl
                 wrapMode: Text.WordWrap
@@ -207,8 +209,8 @@ Item {
             Rectangle {
                 width: parent.width
                 height: 80
-                color: "#1A09090B"
-                border.color: "#1AFFFFFF"
+                color: Theme.bgPanel
+                border.color: Theme.borderLight
                 radius: 12
 
                 Column {
@@ -219,7 +221,7 @@ Item {
 
                     Text {
                         text: "SEASON"
-                        color: "#9CA3AF"
+                        color: Theme.textTertiary
                         font.pixelSize: 12
                         font.bold: true
                         font.letterSpacing: 1
@@ -230,13 +232,13 @@ Item {
                         textRole: "seasonText"
                         width: 280
                         background: Rectangle {
-                            color: "#09090B"
-                            border.color: "#3F3F46"
+                            color: Theme.bgBase
+                            border.color: Theme.borderInput
                             radius: 8
                         }
                         contentItem: Text {
                             text: seasonComboBox.currentText
-                            color: "white"
+                            color: Theme.textTitle
                             verticalAlignment: Text.AlignVCenter
                             leftPadding: 12
                         }
@@ -253,7 +255,7 @@ Item {
                     anchors.bottom: parent.bottom
                     anchors.margins: 16
                     text: episodeModel.count + " episode" + (episodeModel.count === 1 ? "" : "s")
-                    color: "#9CA3AF"
+                    color: Theme.textTertiary
                     font.pixelSize: 14
                 }
             }
@@ -278,8 +280,8 @@ Item {
                         width: episodeFlow.width < 900 ? episodeFlow.width : (episodeFlow.width - 16) / 2
                         height: 120
                         radius: 12
-                        color: mouseArea.containsMouse ? "#1A1A1A" : "#000000"
-                        border.color: mouseArea.containsMouse ? "#6366F1" : "#27272A"
+                        color: mouseArea.containsMouse ? Theme.bgCardHover : Theme.bgBlack
+                        border.color: mouseArea.containsMouse ? Theme.accent : Theme.borderDark
                         opacity: model.fileId !== -1 ? 1.0 : 0.6
 
                         // Thumbnail container (anchored flatly to the left)
@@ -293,7 +295,7 @@ Item {
                             }
                             width: 144
                             radius: 8
-                            color: "#27272A"
+                            color: Theme.bgBadge
                             clip: true
                             Image {
                                 anchors.fill: parent
@@ -319,7 +321,7 @@ Item {
                                 spacing: 8
                                 Text {
                                     text: "Episode " + model.episodeNum
-                                    color: "#818CF8"
+                                    color: Theme.accentLight
                                     font.pixelSize: 12
                                     font.bold: true
                                 }
@@ -328,11 +330,11 @@ Item {
                                     width: 80
                                     height: 18
                                     radius: 9
-                                    color: "#27272A"
+                                    color: Theme.bgBadge
                                     Text {
                                         anchors.centerIn: parent
                                         text: "MISSING FILE"
-                                        color: "#9CA3AF"
+                                        color: Theme.textTertiary
                                         font.pixelSize: 9
                                         font.bold: true
                                     }
@@ -341,7 +343,7 @@ Item {
 
                             Text {
                                 text: model.epTitle
-                                color: "white"
+                                color: Theme.textTitle
                                 font.pixelSize: 16
                                 font.bold: true
                                 width: parent.width
@@ -349,7 +351,7 @@ Item {
                             }
                             Text {
                                 text: model.epOverview
-                                color: "#9CA3AF"
+                                color: Theme.textTertiary
                                 font.pixelSize: 12
                                 width: parent.width
                                 wrapMode: Text.WordWrap
