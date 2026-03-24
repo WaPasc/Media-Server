@@ -27,6 +27,7 @@ qt_add_qml_module(appMediaServerClient
         LibraryScreen.qml
         PlayerScreen.qml
         ShowDetailScreen.qml
+        MovieDetailScreen.qml
         Theme.qml
 
 

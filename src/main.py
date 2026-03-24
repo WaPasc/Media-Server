@@ -82,6 +82,37 @@ async def get_movies(request: Request, db: AsyncSession = Depends(get_db)):
     ]
 
 
+@app.get('/api/movie/{movie_id}')
+async def get_movie_details(
+    movie_id: int, request: Request, db: AsyncSession = Depends(get_db)
+):
+    """Fetches detailed info for a specific movie."""
+
+    # Fetch the movie and its attached files
+    stmt = select(Movie).where(Movie.id == movie_id).options(selectinload(Movie.files))
+    result = await db.execute(stmt)
+    movie = result.scalars().first()
+
+    if not movie:
+        raise HTTPException(status_code=404, detail='Movie not found')
+
+    tmdb_client: TMDBClient = request.app.state.tmdb_client
+
+    return {
+        'id': movie.id,
+        'title': movie.title,
+        'year': movie.year,
+        'overview': movie.overview,
+        'poster_url': tmdb_client.get_poster_url(movie.poster_path)
+        if movie.poster_path
+        else None,
+        'backdrop_url': tmdb_client.get_backdrop_url(movie.backdrop_path)
+        if movie.backdrop_path
+        else None,
+        'file_id': movie.files[0].id if movie.files else None,
+    }
+
+
 @app.get('/api/shows')
 async def get_shows(request: Request, db: AsyncSession = Depends(get_db)):
     """Fetches all scanned TV shows and returns them with full poster URLs"""

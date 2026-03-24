@@ -5,7 +5,6 @@ import MediaServerClient
 
 Item {
     id: root
-
     focus: true
 
     // Signals to talk to Main.qml
@@ -13,10 +12,17 @@ Item {
     signal fullscreenRequested
 
     property bool cursorVisible: true
-
     property int currentFileId: -1
 
-    Keys.onSpacePressed: {
+    // Force the player to steal keyboard focus whenever it opens
+    onVisibleChanged: {
+        if (visible) {
+            root.forceActiveFocus()
+        }
+    }
+
+    // Add 'event' to the parameter list so we can accept the keystroke
+    Keys.onSpacePressed: event => {
         videoPlayer.isPaused = !videoPlayer.isPaused;
         videoPlayer.setProperty("pause", videoPlayer.isPaused ? "yes" : "no");
 
@@ -27,6 +33,9 @@ Item {
         } else {
             hideTimer.restart();
         }
+
+        // Tell Qt "I handled this keypress, do not pass it to any other buttons"
+        event.accepted = true;
     }
 
     // Public functions to control the player from the outside

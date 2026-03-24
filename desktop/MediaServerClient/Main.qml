@@ -26,8 +26,8 @@ Window {
     Shortcut {
         sequence: "Esc"
         onActivated: {
-            mainWindow.showNormal()
-            library.forceActiveFocus()
+            mainWindow.showNormal();
+            library.forceActiveFocus();
         }
     }
 
@@ -37,14 +37,27 @@ Window {
         visible: currentScreen === "library"
 
         // Catch the signal from LibraryScreen.qml
-        onMovieSelected: (streamUrl, fileId) => {
-            player.playVideo(streamUrl, fileId);
-            currentScreen = "player";
+        onMovieSelected: movieId => {
+            movieDetail.movieId = movieId;
+            currentScreen = "movieDetail";
         }
 
         onShowSelected: showId => {
             showDetail.showId = showId; // Pass ID to details screen
             currentScreen = "showDetail"; // Swap screens
+        }
+    }
+
+    MovieDetailScreen {
+        id: movieDetail
+        anchors.fill: parent
+        visible: currentScreen === "movieDetail"
+
+        onBackClicked: currentScreen = "library"
+
+        onMoviePlay: (streamUrl, fileId) => {
+            player.playVideo(streamUrl, fileId);
+            currentScreen = "player";
         }
     }
 
@@ -57,7 +70,7 @@ Window {
             currentScreen = "library";
         }
 
-        onEpisodeSelected: (streamUrl, fileId) => {
+        onEpisodePlay: (streamUrl, fileId) => {
             player.playVideo(streamUrl, fileId);
             currentScreen = "player";
         }

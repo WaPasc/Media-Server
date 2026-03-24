@@ -6,7 +6,7 @@ import MediaServerClient
 Item {
     id: root
 
-    signal movieSelected(string streamUrl, int fileId)
+    signal movieSelected(int movieId)
     signal showSelected(int showId)
 
     property string currentMode: "movies"
@@ -295,8 +295,8 @@ Item {
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
                     if (currentMode === "movies") {
-                        let streamUrl = "http://127.0.0.1:8000/api/stream/" + model.fileId + "?direct_play=true";
-                        root.movieSelected(streamUrl, model.fileId);
+                        // Pass the mediaId instead of constructing the stream URL
+                        root.movieSelected(model.mediaId);
                     } else {
                         root.showSelected(model.mediaId);
                     }

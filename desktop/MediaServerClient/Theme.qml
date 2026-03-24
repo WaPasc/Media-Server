@@ -25,6 +25,7 @@ QtObject {
     readonly property color bgCardHover: "#1A1A1A"
     readonly property color bgBlack: "#000000"
     readonly property color bgBadge: "#27272A"
+    readonly property color bgGlass: "#66000000"
 
     // Additional Borders
     readonly property color borderLight: "#1AFFFFFF"
