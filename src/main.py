@@ -3,11 +3,10 @@ import mimetypes
 import os
 from contextlib import asynccontextmanager
 
-import aiofiles
 import uvicorn
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -237,60 +236,16 @@ async def stream_video(
     # ==========================================
     # ROUTE B: NATIVE STREAMING (MP4 / WebM)
     # ==========================================
-    file_size = os.path.getsize(file_path)
-
-    # Parse the Range header (e.g., "bytes=0-")
-    start = 0
-    end = file_size - 1
-
-    if range:
-        range_str = range.replace('bytes=', '')
-        parts = range_str.split('-')
-        start = int(parts[0]) if parts[0] else 0
-        # Sometimes the browser requests a specific end byte, sometimes it just wants "everything after start"
-        end = int(parts[1]) if len(parts) > 1 and parts[1] else file_size - 1
-
-    # Validate the range
-    if start >= file_size:
-        raise HTTPException(status_code=416, detail='Requested Range Not Satisfiable')
-
-    # Limit the chunk size so we don't overload the server's RAM
-    content_length = end - start + 1
-
-    # Create a generator to stream the file chunk from disk
-    async def file_iterator(path, offset, bytes_to_read):
-        async with aiofiles.open(path, mode='rb') as f:
-            await f.seek(offset)
-            bytes_left = bytes_to_read
-            while bytes_left > 0:
-                # Read in smaller 64KB chunks inside the generator for memory efficiency
-                read_size = min(65536, bytes_left)
-                data = await f.read(read_size)
-                if not data:
-                    break
-                bytes_left -= len(data)
-                yield data
-
-    # Build the headers required for a 206 Partial Content response
     # Simple mime-type guess based on extension
     content_type, _ = mimetypes.guess_type(file_path)
-
-    # Fallback if system doesn't recognize the extension
     if not content_type:
         content_type = 'application/octet-stream'
 
-    headers = {
-        'Content-Range': f'bytes {start}-{end}/{file_size}',
-        'Accept-Ranges': 'bytes',
-        'Content-Length': str(content_length),
-        'Content-Type': content_type,
-    }
-
-    # Return the chunk
-    return StreamingResponse(
-        file_iterator(file_path, start, content_length),
-        status_code=206,
-        headers=headers,
+    # FileResponse automatically handles HTTP Range requests, 206 Partial Content,
+    # and zero-copy os.sendfile streaming
+    return FileResponse(
+        path=file_path,
+        media_type=content_type,
     )
 
 
