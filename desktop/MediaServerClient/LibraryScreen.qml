@@ -6,7 +6,7 @@ Item {
     id: root
 
     // This signal acts as our outbound "event"
-    signal movieSelected(string streamUrl)
+    signal movieSelected(string streamUrl, int fileId)
     signal showSelected(int showId)
 
     property string currentMode: "movies"
@@ -112,7 +112,7 @@ Item {
                     if (currentMode === "movies") {
                         let streamUrl = "http://127.0.0.1:8000/api/stream/" + model.fileId + "?direct_play=true";
                         // Emit the signal, passing the URL out of this component!
-                        root.movieSelected(streamUrl);
+                        root.movieSelected(streamUrl, model.fileId);
                     } else {
                         // It's a TV Show, pass the ID
                         root.showSelected(model.mediaId);

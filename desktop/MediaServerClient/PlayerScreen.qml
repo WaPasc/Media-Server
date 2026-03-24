@@ -12,13 +12,63 @@ Item {
 
     property bool cursorVisible: true
 
+    property int currentFileId: -1
+
     // Public functions to control the player from the outside
-    function playVideo(url) {
-        videoPlayer.command(["loadfile", url]);
+    function playVideo(url, fileId) {
+        root.currentFileId = fileId;
+
+        // Ask server if we need to seek to where we left
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", "http://127.0.0.1:8000/api/progress/" + fileId);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+                let data = JSON.parse(xhr.responseText);
+                let startTime = data.stopped_at;
+
+                // Tell mpv to load the file, but pass the "start=X" option!
+                if (startTime > 0) {
+                    videoPlayer.command(["loadfile", url, "replace", "start=" + startTime]);
+                } else {
+                    videoPlayer.command(["loadfile", url]);
+                }
+            }
+        };
+        xhr.send();
     }
 
     function stopVideo() {
+        sendProgressUpdate();
         videoPlayer.command(["stop"]);
+        root.currentFileId = -1;
+    }
+
+    Timer {
+        id: telemetryTimer
+        interval: 5000 // 5 seconds
+        running: root.visible && !videoPlayer.isPaused && root.currentFileId !== -1
+        repeat: true
+        onTriggered: {
+            sendProgressUpdate();
+        }
+    }
+
+    function sendProgressUpdate() {
+        // Don't send updates if the video hasn't loaded properly
+        if (videoPlayer.totalDuration <= 0)
+            return;
+
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http://127.0.0.1:8000/api/progress");
+        xhr.setRequestHeader("Content-Type", "application/json");
+
+        var payload = {
+            "file_id": root.currentFileId,
+            "current_time": videoPlayer.currentTime,
+            "total_duration": videoPlayer.totalDuration
+        };
+
+        xhr.send(JSON.stringify(payload));
     }
 
     function formatTime(timeInSeconds) {

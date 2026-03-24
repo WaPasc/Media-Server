@@ -34,8 +34,8 @@ Window {
         visible: currentScreen === "library"
 
         // Catch the signal from LibraryScreen.qml
-        onMovieSelected: streamUrl => {
-            player.playVideo(streamUrl);
+        onMovieSelected: (streamUrl, fileId) => {
+            player.playVideo(streamUrl, fileId);
             currentScreen = "player";
         }
 
@@ -54,8 +54,8 @@ Window {
             currentScreen = "library";
         }
 
-        onEpisodeSelected: streamUrl => {
-            player.playVideo(streamUrl);
+        onEpisodeSelected: (streamUrl, fileId) => {
+            player.playVideo(streamUrl, fileId);
             currentScreen = "player";
         }
     }

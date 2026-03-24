@@ -8,12 +8,13 @@ import uvicorn
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
 from database import get_db
-from db_models import Episode, MediaFile, Movie, Season, TVShow
+from db_models import Episode, MediaFile, Movie, Season, TVShow, WatchProgress
 from tmdb_client import TMDBClient
 
 CHUNK_SIZE = 1024 * 1024 * 2
@@ -44,6 +45,12 @@ app.add_middleware(
     allow_methods=['*'],
     allow_headers=['*'],
 )
+
+
+class ProgressUpdate(BaseModel):
+    file_id: int
+    current_time: float
+    total_duration: float
 
 
 @app.get('/api/movies')
@@ -286,6 +293,60 @@ async def stream_video(
         status_code=206,
         headers=headers,
     )
+
+
+@app.post('/api/progress')
+async def update_progress(data: ProgressUpdate, db: AsyncSession = Depends(get_db)):
+    """Receives heartbeat updates"""
+
+    # Calculate if the user watched at least 90% of the video
+    is_finished = False
+    if data.total_duration > 0 and (data.current_time / data.total_duration) > 0.95:
+        is_finished = True
+
+    # Check if a progress row already exists for this user and file
+    stmt = select(WatchProgress).where(
+        WatchProgress.user_id == 1, WatchProgress.media_file_id == data.file_id
+    )
+    result = await db.execute(stmt)
+    progress = result.scalars().first()
+
+    if progress:
+        # Update existing progress
+        progress.stopped_at = data.current_time
+        progress.is_completed = is_finished
+    else:
+        # Create new progress
+        progress = WatchProgress(
+            user_id=1,
+            media_file_id=data.file_id,
+            stopped_at=data.current_time,
+            is_completed=is_finished,
+        )
+        db.add(progress)
+
+    await db.commit()
+    return {
+        'status': 'success',
+        'stopped_at': progress.stopped_at,
+        'is_completed': progress.is_completed,
+    }
+
+
+@app.get('/api/progress/{file_id}')
+async def get_progress(file_id: int, db: AsyncSession = Depends(get_db)):
+    """Fetches the stopped time so the player knows where to resume."""
+    stmt = select(WatchProgress).where(
+        WatchProgress.user_id == 1, WatchProgress.media_file_id == file_id
+    )
+    result = await db.execute(stmt)
+    progress = result.scalars().first()
+
+    if progress and not progress.is_completed:
+        return {'stopped_at': progress.stopped_at}
+
+    # If no progress exists, or they already finished the movie, start at 0
+    return {'stopped_at': 0.0}
 
 
 if __name__ == '__main__':

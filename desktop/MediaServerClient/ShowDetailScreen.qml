@@ -5,7 +5,7 @@ Item {
     id: root
 
     signal backClicked
-    signal episodeSelected(string streamUrl)
+    signal episodeSelected(string streamUrl, int fileId)
 
     property int showId: -1
     property string showTitle: ""
@@ -367,7 +367,7 @@ Item {
                             onClicked: {
                                 if (model.fileId !== -1) {
                                     let streamUrl = "http://127.0.0.1:8000/api/stream/" + model.fileId + "?direct_play=true";
-                                    root.episodeSelected(streamUrl);
+                                    root.episodeSelected(streamUrl, model.fileId);
                                 }
                             }
                         }
