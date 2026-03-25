@@ -13,7 +13,7 @@ class ShowResponse(BaseModel):
     backdrop_url: str | None = None
 
     @classmethod
-    def from_models(cls, s: TVShow, tmdb_client: TMDBClient):
+    def from_model(cls, s: TVShow, tmdb_client: TMDBClient):
         return cls(
             id=s.id,
             title=s.title,
@@ -45,7 +45,7 @@ class ShowDetailResponse(ShowResponse):
     seasons: list[SeasonResponse]
 
     @classmethod
-    def from_models(cls, s: TVShow, tmdb_client: TMDBClient):
+    def from_model(cls, s: TVShow, tmdb_client: TMDBClient):
         return cls(
             id=s.id,
             title=s.title,
@@ -66,7 +66,9 @@ class ShowDetailResponse(ShowResponse):
                             title=ep.title,
                             overview=ep.overview,
                             file_id=ep.files[0].id if ep.files else None,
-                            still_url=tmdb_client.get_still_url(ep.still_path),
+                            still_url=tmdb_client.get_still_url(ep.still_path)
+                            if ep.still_path
+                            else None,
                         )
                         for ep in season.episodes
                     ],

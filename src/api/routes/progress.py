@@ -1,10 +1,17 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from database import get_db
 from db_models import WatchProgress
-from schemas.progress import ProgressResponse, ProgressUpdate, ProgressUpdateResponse
+from mappers.progress_mapper import map_continue_watching
+from schemas.progress import (
+    ContinueWatchingItem,
+    ProgressResponse,
+    ProgressUpdate,
+    ProgressUpdateResponse,
+)
+from services.progress_service import get_continue_watching
 
 router = APIRouter(prefix='/api', tags=['progress'])
 
@@ -61,3 +68,21 @@ async def get_progress(file_id: int, db: AsyncSession = Depends(get_db)):
 
     # If no progress exists, or they already finished the movie, start at 0
     return ProgressResponse(stopped_at=0.0)
+
+
+@router.get('/continue-watching', response_model=list[ContinueWatchingItem])
+async def continue_watching(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    user_id = 1  # TODO: Get from auth
+
+    progress_records = await get_continue_watching(db, user_id)
+
+    tmdb_client = request.app.state.tmdb_client
+
+    return [
+        item
+        for p in progress_records
+        if (item := map_continue_watching(p, tmdb_client))
+    ]
