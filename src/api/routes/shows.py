@@ -5,6 +5,7 @@ from sqlalchemy.orm import selectinload
 
 from database import get_db
 from db_models import Episode, Season, TVShow
+from schemas.shows import ShowResponse
 from services.tmdb_client import TMDBClient
 
 router = APIRouter(prefix='/api', tags=['shows'])
@@ -19,24 +20,7 @@ async def get_shows(request: Request, db: AsyncSession = Depends(get_db)):
 
     tmbd_client: TMDBClient = request.app.state.tmdb_client
 
-    show_list = []
-    for s in shows:
-        show_list.append(
-            {
-                'id': s.id,
-                'title': s.title,
-                'year': s.year,
-                'overview': s.overview,
-                'poster_url': tmbd_client.get_poster_url(s.poster_path)
-                if s.poster_path
-                else None,
-                'backdrop_url': tmbd_client.get_backdrop_url(s.backdrop_path)
-                if s.backdrop_path
-                else None,
-            }
-        )
-
-    return show_list
+    return [ShowResponse.from_models(s, tmbd_client) for s in shows]
 
 
 @router.get('/show/{show_id}')
