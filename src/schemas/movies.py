@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from db_models import Movie
+from models.media import Movie
 from services.tmdb_client import TMDBClient
 
 

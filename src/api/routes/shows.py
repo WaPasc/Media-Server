@@ -3,11 +3,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
-from database import get_db
-from db_models import Episode, Season, TVShow
+from api.dependencies import get_db, get_tmdb_client
+from models.media import Episode, Season, TVShow
 from schemas.shows import ShowDetailResponse, ShowResponse
 from services.tmdb_client import TMDBClient
-from src.dependencies import get_tmdb_client
 
 router = APIRouter(prefix='/api', tags=['shows'])
 
@@ -23,7 +22,7 @@ async def get_shows(
     result = await db.execute(stmt)
     shows = result.scalars().all()
 
-    return [ShowResponse.from_models(s, tmdb_client) for s in shows]
+    return [ShowResponse.from_model(s, tmdb_client) for s in shows]
 
 
 @router.get('/show/{show_id}')
@@ -50,4 +49,4 @@ async def get_show_details(
     if not show:
         raise HTTPException(status_code=404, detail='TV show not found')
 
-    return ShowDetailResponse.from_models(show, tmdb_client)
+    return ShowDetailResponse.from_model(show, tmdb_client)

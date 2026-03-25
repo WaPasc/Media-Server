@@ -1,7 +1,8 @@
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from db_models import Episode, MediaFile, Movie, Season, WatchProgress
+from models.media import Episode, MediaFile, Movie, Season
+from models.user import WatchProgress
 
 
 async def get_continue_watching(db, user_id: int, limit: int = 10):

@@ -1,7 +1,7 @@
 import asyncio
 
-from database import engine
-from db_models import Base
+from core.database import engine
+from models.db_models import Base
 
 
 async def init_database() -> None:

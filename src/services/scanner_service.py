@@ -6,10 +6,10 @@ from typing import Any
 from sqlalchemy import func
 from sqlalchemy.future import select
 
-from database import AsyncSessionLocal
-from db_models import Episode, MediaFile, Movie, Season, TVShow
+from core.database import AsyncSessionLocal
 from metadata import extract_local_info
 from services.tmdb_client import TMDBClient
+from src.models.media import Episode, MediaFile, Movie, Season, TVShow
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)

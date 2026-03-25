@@ -7,8 +7,8 @@ from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy import Select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_db
-from db_models import MediaFile
+from api.dependencies import get_db
+from models.media import MediaFile
 
 router = APIRouter(prefix='/api', tags=['stream'])
 

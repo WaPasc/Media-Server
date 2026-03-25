@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from database import get_db
-from db_models import WatchProgress
+from api.dependencies import get_db, get_tmdb_client
 from mappers.progress_mapper import map_continue_watching
+from models.user import WatchProgress
 from schemas.progress import (
     ContinueWatchingItem,
     ProgressResponse,
@@ -12,8 +12,7 @@ from schemas.progress import (
     ProgressUpdateResponse,
 )
 from services.progress_service import get_continue_watching
-from src.dependencies import get_tmdb_client
-from src.services.tmdb_client import TMDBClient
+from services.tmdb_client import TMDBClient
 
 router = APIRouter(prefix='/api', tags=['progress'])
 
@@ -74,7 +73,6 @@ async def get_progress(file_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.get('/continue-watching', response_model=list[ContinueWatchingItem])
 async def continue_watching(
-    request: Request,
     db: AsyncSession = Depends(get_db),
     tmdb_client: TMDBClient = Depends(get_tmdb_client),
 ):

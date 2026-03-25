@@ -3,9 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
-from database import get_db
-from db_models import Movie
-from dependencies import get_tmdb_client
+from api.dependencies import get_db, get_tmdb_client
+from models.media import Movie
 from schemas.movies import MovieResponse
 from services.tmdb_client import TMDBClient
 

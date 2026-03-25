@@ -1,4 +1,4 @@
-from db_models import WatchProgress
+from models.user import WatchProgress
 from schemas.movies import MovieResponse
 from schemas.progress import (
     ContinueWatchingEpisode,

@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from db_models import TVShow
+from models.media import TVShow
 from services.tmdb_client import TMDBClient
 
 
