@@ -4,7 +4,7 @@ from sqlalchemy.future import select
 
 from database import get_db
 from db_models import WatchProgress
-from schemas.progress import ProgressUpdate
+from schemas.progress import ProgressResponse, ProgressUpdate, ProgressUpdateResponse
 
 router = APIRouter(prefix='/api', tags=['progress'])
 
@@ -40,11 +40,11 @@ async def update_progress(data: ProgressUpdate, db: AsyncSession = Depends(get_d
         db.add(progress)
 
     await db.commit()
-    return {
-        'status': 'success',
-        'stopped_at': progress.stopped_at,
-        'is_completed': progress.is_completed,
-    }
+    return ProgressUpdateResponse(
+        status='success',
+        stopped_at=progress.stopped_at,
+        is_completed=progress.is_completed,
+    )
 
 
 @router.get('/progress/{file_id}')
@@ -57,7 +57,7 @@ async def get_progress(file_id: int, db: AsyncSession = Depends(get_db)):
     progress = result.scalars().first()
 
     if progress and not progress.is_completed:
-        return {'stopped_at': progress.stopped_at}
+        return ProgressResponse(stopped_at=progress.stopped_at)
 
     # If no progress exists, or they already finished the movie, start at 0
-    return {'stopped_at': 0.0}
+    return ProgressResponse(stopped_at=0.0)
