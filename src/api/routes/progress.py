@@ -12,6 +12,8 @@ from schemas.progress import (
     ProgressUpdateResponse,
 )
 from services.progress_service import get_continue_watching
+from src.dependencies import get_tmdb_client
+from src.services.tmdb_client import TMDBClient
 
 router = APIRouter(prefix='/api', tags=['progress'])
 
@@ -74,12 +76,11 @@ async def get_progress(file_id: int, db: AsyncSession = Depends(get_db)):
 async def continue_watching(
     request: Request,
     db: AsyncSession = Depends(get_db),
+    tmdb_client: TMDBClient = Depends(get_tmdb_client),
 ):
     user_id = 1  # TODO: Get from auth
 
     progress_records = await get_continue_watching(db, user_id)
-
-    tmdb_client = request.app.state.tmdb_client
 
     return [
         item
