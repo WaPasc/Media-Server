@@ -9,7 +9,6 @@
 - [ ] Next Episode Auto-Queue ("Up Next"): Implement logic so that if a user finishes Season 1 Episode 1, the system automatically places Season 1 Episode 2 in their "Continue Watching" row.
 
 ## Frontend & Player Experience
-- [ ] Movie Details Page: Create a detailed page for each movie that includes information such as synopsis, cast, and user reviews.
 - [ ] Hero Banner: Add a large featured media banner to the top of the main library screens.
 - [ ] Volume Control: Implement a volume control feature in the video player for better user experience.
 - [ ] Audio Track Selection: Add a button in the video player to cycle through audio tracks (crucial for anime or dual-audio MKV files).

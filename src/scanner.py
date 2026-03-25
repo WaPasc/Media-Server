@@ -9,7 +9,7 @@ from sqlalchemy.future import select
 from database import AsyncSessionLocal
 from db_models import Episode, MediaFile, Movie, Season, TVShow
 from metadata import extract_local_info
-from tmdb_client import TMDBClient
+from services.tmdb_client import TMDBClient
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
