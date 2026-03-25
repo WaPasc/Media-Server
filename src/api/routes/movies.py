@@ -5,6 +5,7 @@ from sqlalchemy.orm import selectinload
 
 from database import get_db
 from db_models import Movie
+from schemas.movies import MovieResponse
 from services.tmdb_client import TMDBClient
 
 router = APIRouter(prefix='/api', tags=['movies'])
@@ -22,22 +23,7 @@ async def get_movies(request: Request, db: AsyncSession = Depends(get_db)):
     tmdb_client: TMDBClient = request.app.state.tmdb_client
 
     # Format response using a list comprehension
-    return [
-        {
-            'id': m.id,
-            'title': m.title,
-            'year': m.year,
-            'overview': m.overview,
-            'poster_url': tmdb_client.get_poster_url(m.poster_path)
-            if m.poster_path
-            else None,
-            'backdrop_url': tmdb_client.get_backdrop_url(m.backdrop_path)
-            if m.backdrop_path
-            else None,
-            'file_id': m.files[0].id if m.files else None,
-        }
-        for m in movies
-    ]
+    return [MovieResponse.from_model(m, tmdb_client) for m in movies]
 
 
 @router.get('/movie/{movie_id}')
@@ -56,16 +42,4 @@ async def get_movie_details(
 
     tmdb_client: TMDBClient = request.app.state.tmdb_client
 
-    return {
-        'id': movie.id,
-        'title': movie.title,
-        'year': movie.year,
-        'overview': movie.overview,
-        'poster_url': tmdb_client.get_poster_url(movie.poster_path)
-        if movie.poster_path
-        else None,
-        'backdrop_url': tmdb_client.get_backdrop_url(movie.backdrop_path)
-        if movie.backdrop_path
-        else None,
-        'file_id': movie.files[0].id if movie.files else None,
-    }
+    return MovieResponse.from_model(movie, tmdb_client)
