@@ -16,3 +16,9 @@ quote-style = "single"
 [tool.ruff.lint.flake8-bugbear]
 # Allow FastAPI Depends() as a default argument
 extend-immutable-calls = ["Depends", "fastapi.Depends"]
+
+[tool.alembic]
+script_location = "src/alembic"
+prepend_sys_path = ["."]
+# Leave the URL blank here because we inject it securely in env.py
+sqlalchemy.url = ""

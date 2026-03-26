@@ -9,10 +9,10 @@ POSTGRES_URL = os.getenv('POSTGRES_URL')
 if not POSTGRES_URL:
     raise ValueError('POSTGRES_URL not found in environment')
 
-ASYNC_URL = POSTGRES_URL.replace('postgresql://', 'postgresql+psycopg://')
+SQLALCHEMY_DATABASE_URL = POSTGRES_URL.replace('postgresql://', 'postgresql+psycopg://')
 
 # create_async_engine for async operations
-engine = create_async_engine(ASYNC_URL, echo=False)
+engine = create_async_engine(SQLALCHEMY_DATABASE_URL, echo=False)
 
 # SQLAlchemy 2.0 to handle async sessions
 AsyncSessionLocal = async_sessionmaker(
