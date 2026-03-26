@@ -1,53 +1,31 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
 
 from api.dependencies import get_db, get_tmdb_client
 from mappers.progress_mapper import map_continue_watching
-from models.user import WatchProgress
 from schemas.progress import (
     ContinueWatchingItem,
     ProgressResponse,
     ProgressUpdate,
     ProgressUpdateResponse,
 )
-from services.progress_service import get_continue_watching
+from services.progress_service import (
+    get_continue_watching,
+    get_progress_for_file,
+    upsert_watch_progress,
+)
 from services.tmdb_client import TMDBClient
 
 router = APIRouter(prefix='/api', tags=['progress'])
 
 
-@router.post('/progress')
+@router.post('/progress', response_model=ProgressUpdateResponse)
 async def update_progress(data: ProgressUpdate, db: AsyncSession = Depends(get_db)):
-    """Receives heartbeat updates"""
+    """Receives heartbeat updates and saves watch progress."""
+    user_id = 1  # TODO: Get from auth
 
-    # Calculate if the user watched at least 90% of the video
-    is_finished = False
-    if data.total_duration > 0 and (data.current_time / data.total_duration) > 0.95:
-        is_finished = True
+    progress = await upsert_watch_progress(db, user_id=user_id, data=data)
 
-    # Check if a progress row already exists for this user and file
-    stmt = select(WatchProgress).where(
-        WatchProgress.user_id == 1, WatchProgress.media_file_id == data.file_id
-    )
-    result = await db.execute(stmt)
-    progress = result.scalars().first()
-
-    if progress:
-        # Update existing progress
-        progress.stopped_at = data.current_time
-        progress.is_completed = is_finished
-    else:
-        # Create new progress
-        progress = WatchProgress(
-            user_id=1,
-            media_file_id=data.file_id,
-            stopped_at=data.current_time,
-            is_completed=is_finished,
-        )
-        db.add(progress)
-
-    await db.commit()
     return ProgressUpdateResponse(
         status='success',
         stopped_at=progress.stopped_at,
@@ -58,11 +36,7 @@ async def update_progress(data: ProgressUpdate, db: AsyncSession = Depends(get_d
 @router.get('/progress/{file_id}')
 async def get_progress(file_id: int, db: AsyncSession = Depends(get_db)):
     """Fetches the stopped time so the player knows where to resume."""
-    stmt = select(WatchProgress).where(
-        WatchProgress.user_id == 1, WatchProgress.media_file_id == file_id
-    )
-    result = await db.execute(stmt)
-    progress = result.scalars().first()
+    progress = await get_progress_for_file(db, user_id=1, media_file_id=file_id)
 
     if progress and not progress.is_completed:
         return ProgressResponse(stopped_at=progress.stopped_at)

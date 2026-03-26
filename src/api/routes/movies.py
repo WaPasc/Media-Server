@@ -1,11 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from sqlalchemy.orm import selectinload
 
 from api.dependencies import get_db, get_tmdb_client
-from models.media import Movie
 from schemas.movies import MovieResponse
+from services.movie_service import get_all_movies, get_movie_by_id
 from services.tmdb_client import TMDBClient
 
 router = APIRouter(prefix='/api', tags=['movies'])
@@ -13,15 +11,13 @@ router = APIRouter(prefix='/api', tags=['movies'])
 
 @router.get('/movies')
 async def get_movies(
-    request: Request,
     db: AsyncSession = Depends(get_db),
     tmdb_client: TMDBClient = Depends(get_tmdb_client),
 ):
     """Fetches all scanned movies and returns them with full poster URLs"""
 
-    stmt = select(Movie).options(selectinload(Movie.files))
-    result = await db.execute(stmt)
-    movies = result.scalars().all()
+    # Fetch all movies and their attached files
+    movies = await get_all_movies(db)
 
     # Format response using a list comprehension
     return [MovieResponse.from_model(m, tmdb_client) for m in movies]
@@ -30,16 +26,13 @@ async def get_movies(
 @router.get('/movie/{movie_id}')
 async def get_movie_details(
     movie_id: int,
-    request: Request,
     db: AsyncSession = Depends(get_db),
     tmdb_client: TMDBClient = Depends(get_tmdb_client),
 ):
     """Fetches detailed info for a specific movie."""
 
     # Fetch the movie and its attached files
-    stmt = select(Movie).where(Movie.id == movie_id).options(selectinload(Movie.files))
-    result = await db.execute(stmt)
-    movie = result.scalars().first()
+    movie = await get_movie_by_id(db, movie_id)
 
     if not movie:
         raise HTTPException(status_code=404, detail='Movie not found')
