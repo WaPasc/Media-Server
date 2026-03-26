@@ -72,7 +72,8 @@ Item {
                 "epTitle": ep.title,
                 "epOverview": ep.overview || "No description available.",
                 "fileId": ep.file_id || -1,
-                "stillUrl": ep.still_url || backdropUrl || ""
+                "stillUrl": ep.still_url || backdropUrl || "",
+                "isCompleted": ep.is_completed || false
             });
         }
     }
@@ -359,6 +360,27 @@ Item {
                                 elide: Text.ElideRight
                                 lineHeight: 1.2
                             }
+                        }
+
+                        Image {
+                            source: "check-circle.svg"
+                            width: 22
+                            height: 22
+                            sourceSize.width: 22
+                            sourceSize.height: 22
+
+                            anchors.right: parent.right
+                            anchors.top: parent.top
+                            anchors.margins: 12
+
+                            visible: model.isCompleted || false
+
+                            Behavior on opacity {
+                                NumberAnimation {
+                                    duration: 200
+                                }
+                            }
+                            opacity: visible ? 1.0 : 0.0
                         }
 
                         MouseArea {
