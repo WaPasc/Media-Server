@@ -1,7 +1,13 @@
 // frontend/src/App.tsx
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { fetchMovies, fetchShows, type Media, type Movie } from "./api";
+import {
+  fetchContinueWatching,
+  fetchMovies,
+  fetchShows,
+  type Media,
+  type Movie,
+} from "./api";
 import { VideoPlayer } from "./components/VideoPlayer";
 import { MovieDetails } from "./components/MovieDetails";
 import { ShowDetails } from "./components/ShowDetails";
@@ -14,7 +20,11 @@ export default function App() {
   const [selectedMedia, setSelectedMedia] = useState<Media | null>(null);
   
   // The specific file to stream and its display title
-  const [playingMedia, setPlayingMedia] = useState<{fileId: number, title: string} | null>(null);
+  const [playingMedia, setPlayingMedia] = useState<{
+    fileId: number;
+    title: string;
+    startAt?: number;
+  } | null>(null);
 
   const { data: movies = [], isLoading: loadingMovies, isError: isMovieError } = useQuery({
     queryKey: ["movies"],
@@ -25,6 +35,12 @@ export default function App() {
   const { data: shows = [], isLoading: loadingShows, isError: isShowError } = useQuery({
     queryKey: ["shows"],
     queryFn: fetchShows,
+    retry: 2,
+  });
+
+  const { data: continueWatching = [] } = useQuery({
+    queryKey: ["continueWatching"],
+    queryFn: fetchContinueWatching,
     retry: 2,
   });
 
@@ -61,6 +77,7 @@ export default function App() {
       <VideoPlayer
         fileId={playingMedia.fileId}
         title={playingMedia.title}
+        startAt={playingMedia.startAt}
         onBack={() => setPlayingMedia(null)}
       />
     );
@@ -74,7 +91,7 @@ export default function App() {
         <MovieDetails
           movie={selectedMedia as Movie}
           onBack={() => setSelectedMedia(null)}
-          onPlay={(fileId, title) => setPlayingMedia({ fileId, title })}
+          onPlay={(fileId, title) => setPlayingMedia({ fileId, title, startAt: 0 })}
         />
       );
     }
@@ -84,7 +101,7 @@ export default function App() {
       <ShowDetails
         show={selectedMedia}
         onBack={() => setSelectedMedia(null)}
-        onPlay={(fileId, title) => setPlayingMedia({ fileId, title })}
+        onPlay={(fileId, title) => setPlayingMedia({ fileId, title, startAt: 0 })}
       />
     );
   }
@@ -130,6 +147,10 @@ export default function App() {
         items={activeTab === "movies" ? movies : shows}
         onItemClick={setSelectedMedia}
         activeTab={activeTab}
+        continueWatchingItems={continueWatching}
+        onResume={(fileId, title, startAt) =>
+          setPlayingMedia({ fileId, title, startAt })
+        }
       />
     </div>
   );

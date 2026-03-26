@@ -1,8 +1,6 @@
 # Todo List
 
 ## Continue Watching
-- [ ] Backend Endpoint: Create route in FastAPI to fetch the list of videos that the user has started watching but hasn't finished yet.
-- [ ] Frontend Component: Develop a component to display the "Continue Watching" section for Desktop and WebApp.
 - [ ] Progress Bar: Implement a progress bar to visually indicate how much of the video has been watched.
 - [ ] Button to Continue: Add a button that allows users to easily continue watching from where they left off.
 - [ ] Watched Indicator: Add a visual indicator to show that a video has been fully watched.

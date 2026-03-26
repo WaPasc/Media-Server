@@ -1,13 +1,22 @@
 import { useState } from "react";
-import { type Media } from "../api";
+import { type ContinueWatchingItem, type Media } from "../api";
+import { ContinueWatching } from "./ContinueWatching";
 
 interface MediaGridProps {
   items: Media[];
   onItemClick: (item: Media) => void;
   activeTab: "movies" | "shows";
+  continueWatchingItems: ContinueWatchingItem[];
+  onResume: (fileId: number, title: string, startAt: number) => void;
 }
 
-export function MediaGrid({ items, onItemClick, activeTab }: MediaGridProps) {
+export function MediaGrid({
+  items,
+  onItemClick,
+  activeTab,
+  continueWatchingItems,
+  onResume,
+}: MediaGridProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredItems = items.filter((item) =>
@@ -26,14 +35,18 @@ export function MediaGrid({ items, onItemClick, activeTab }: MediaGridProps) {
         />
       </div>
 
+      <div className="mb-8">
+        <ContinueWatching items={continueWatchingItems} onResume={onResume} />
+      </div>
+
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
         {filteredItems.map((item) => (
           <div
             key={item.id}
             onClick={() => onItemClick(item)}
-            className="group relative cursor-pointer transition-all duration-300 hover:scale-105 hover:z-10"
+            className="group relative cursor-pointer hover:z-10"
           >
-            <div className="aspect-2/3 w-full bg-neutral-900 rounded-xl shadow-lg overflow-hidden border border-neutral-800 group-hover:border-neutral-600 group-hover:shadow-purple-500/20 transition-all">
+            <div className="aspect-2/3 w-full bg-neutral-900 rounded-xl shadow-lg overflow-hidden border border-neutral-800 group-hover:border-neutral-600 group-hover:shadow-purple-500/20 transition-transform duration-300 ease-out transform-gpu group-hover:scale-105">
               {item.poster_url ? (
                 <img
                   src={item.poster_url}

@@ -32,6 +32,30 @@ export interface Episode {
   file_id: number | null;
 }
 
+interface ContinueWatchingBase {
+  file_id: number;
+  stopped_at: number;
+  duration: number | null;
+  progress_percentage: number;
+  updated_at: string;
+}
+
+export interface ContinueWatchingMovie extends ContinueWatchingBase {
+  type: "movie";
+  movie: Movie;
+}
+
+export interface ContinueWatchingEpisode extends ContinueWatchingBase {
+  type: "episode";
+  show: Show;
+  episode: Episode;
+  season_number: number;
+}
+
+export type ContinueWatchingItem =
+  | ContinueWatchingMovie
+  | ContinueWatchingEpisode;
+
 const API_BASE_URL = "http://127.0.0.1:8000/api";
 
 export const fetchMovies = async (): Promise<Movie[]> => {
@@ -51,6 +75,14 @@ export const fetchShowDetails = async (
 ): Promise<ShowDetails> => {
   const response = await fetch(`${API_BASE_URL}/show/${show_id}`);
   if (!response.ok) throw new Error("Failed to fetch show details");
+  return await response.json();
+};
+
+export const fetchContinueWatching = async (): Promise<
+  ContinueWatchingItem[]
+> => {
+  const response = await fetch(`${API_BASE_URL}/continue-watching`);
+  if (!response.ok) throw new Error("Failed to fetch continue watching");
   return await response.json();
 };
 
