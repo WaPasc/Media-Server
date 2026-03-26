@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { fetchShowDetails, type Media } from "../api";
+import { CheckCircle } from "./icons/CheckCircle";
 
 interface ShowDetailsProps {
   show: Media;
@@ -194,6 +195,12 @@ export function ShowDetails({ show, onBack, onPlay }: ShowDetailsProps) {
                               {episode.overview || "No description available."}
                             </p>
                           </div>
+                          {/* Watched Indicator Overlay (Aligned to far right) */}
+                          {episode.is_completed && (
+                            <div className="shrink-0 pl-2">
+                              <CheckCircle className="w-6 h-6 drop-shadow-md animate-in fade-in zoom-in duration-300" />
+                            </div>
+                          )}
                         </div>
                       </button>
                     );

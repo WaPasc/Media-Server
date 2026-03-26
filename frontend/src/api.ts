@@ -7,6 +7,7 @@ export interface Media {
   overview: string | null;
   poster_url: string | null;
   backdrop_url: string | null;
+  is_completed: boolean | null;
 }
 
 export interface Movie extends Media {
@@ -30,6 +31,7 @@ export interface Episode {
   overview: string | null;
   still_url: string | null;
   file_id: number | null;
+  is_completed: boolean | null;
 }
 
 interface ContinueWatchingBase {

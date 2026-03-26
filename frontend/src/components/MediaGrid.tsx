@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { type ContinueWatchingItem, type Media } from "../api";
 import { ContinueWatching } from "./ContinueWatching";
+import { CheckCircle } from "./icons/CheckCircle";
 
 interface MediaGridProps {
   items: Media[];
@@ -56,6 +57,12 @@ export function MediaGrid({
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-neutral-600 text-sm p-4 text-center">
                   No Poster
+                </div>
+              )}
+              { /* Watched Indicator Overlay */}
+              {item.is_completed && activeTab === "movies" && (
+                <div className="absolute top-2 right-2 drop-shadow-md animate-in fade-in duration-300">
+                  <CheckCircle className="w-7 h-7" />
                 </div>
               )}
             </div>

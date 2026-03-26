@@ -3,7 +3,6 @@
 ## Continue Watching
 - [ ] Progress Bar: Implement a progress bar to visually indicate how much of the video has been watched.
 - [ ] Button to Continue: Add a button that allows users to easily continue watching from where they left off.
-- [ ] Watched Indicator: Add a visual indicator to show that a video has been fully watched.
 - [ ] Next Episode Auto-Queue ("Up Next"): Implement logic so that if a user finishes Season 1 Episode 1, the system automatically places Season 1 Episode 2 in their "Continue Watching" row.
 
 ## Frontend & Player Experience
