@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Effects
 import MediaServerClient
 
 Item {
@@ -286,7 +287,7 @@ Item {
                         opacity: model.fileId !== -1 ? 1.0 : 0.6
 
                         // Thumbnail container (anchored flatly to the left)
-                        Rectangle {
+                        Item {
                             id: thumbContainer
                             anchors {
                                 left: parent.left
@@ -295,13 +296,44 @@ Item {
                                 margins: 12
                             }
                             width: 144
-                            radius: 8
-                            color: Theme.bgBadge
-                            clip: true
+
+                            // Solid Background (shows while loading or if image is missing)
+                            Rectangle {
+                                anchors.fill: parent
+                                radius: 8
+                                color: Theme.bgBadge
+                            }
+
+                            //The raw image (hidden)
                             Image {
+                                id: stillImage
                                 anchors.fill: parent
                                 source: model.stillUrl
                                 fillMode: Image.PreserveAspectCrop
+                                visible: false
+                            }
+
+                            // The Mask (hidden)
+                            Item {
+                                id: imageMask
+                                anchors.fill: stillImage
+                                layer.enabled: true
+                                visible: false
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 8 // This sets the roundness of the image
+                                    color: "black"
+                                }
+                            }
+
+                            // The MultiEffect (Renders the rounded image)
+                            MultiEffect {
+                                anchors.fill: stillImage
+                                source: stillImage
+                                maskEnabled: true
+                                maskSource: imageMask
+                                visible: model.stillUrl !== ""
                             }
                         }
 
