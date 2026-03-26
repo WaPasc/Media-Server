@@ -46,6 +46,11 @@ Window {
             showDetail.showId = showId; // Pass ID to details screen
             currentScreen = "showDetail"; // Swap screens
         }
+
+        onResumeMedia: (streamUrl, fileId) => {
+            player.playVideo(streamUrl, fileId);
+            currentScreen = "player";
+        }
     }
 
     MovieDetailScreen {

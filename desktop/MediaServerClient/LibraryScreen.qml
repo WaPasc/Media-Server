@@ -8,6 +8,7 @@ Item {
 
     signal movieSelected(int movieId)
     signal showSelected(int showId)
+    signal resumeMedia(string streamUrl, int fileId)
 
     property string currentMode: "movies"
     property string searchQuery: ""
@@ -17,7 +18,57 @@ Item {
         id: mediaModel
     }
 
-    Component.onCompleted: fetchMedia()
+    // CONTINUE WATCHING DATA
+    ListModel {
+        id: continueWatchingModel
+    }
+
+    function fetchContinueWatching() {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", "http://127.0.0.1:8000/api/continue-watching");
+
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+                let data = JSON.parse(xhr.responseText);
+                continueWatchingModel.clear();
+
+                for (let i = 0; i < data.length; i++) {
+                    let item = data[i];
+
+                    // Safely extract the data based on the type of media
+                    let isMovie = item.type === "movie";
+
+                    let parsedMediaId = isMovie ? item.movie.id : item.show.id;
+                    let parsedTitle = isMovie ? item.movie.title : item.episode.title;
+                    let parsedShowTitle = isMovie ? "" : item.show.title;
+
+                    // Prefer Episode Still -> Movie/Show Backdrop -> Poster
+                    let parsedImage = "";
+                    if (isMovie) {
+                        parsedImage = item.movie.backdrop_url || item.movie.poster_url || "";
+                    } else {
+                        parsedImage = item.episode.still_url || item.show.backdrop_url || item.show.poster_url || "";
+                    }
+
+                    continueWatchingModel.append({
+                        "type": item.type,
+                        "mediaId": parsedMediaId,
+                        "title": parsedTitle,
+                        "showTitle": parsedShowTitle,
+                        "imageUrl": parsedImage,
+                        "progress": item.progress_percentage || 0.0,
+                        "fileId": item.file_id
+                    });
+                }
+            }
+        };
+        xhr.send();
+    }
+
+    Component.onCompleted: {
+        fetchMedia();
+        fetchContinueWatching();
+    }
 
     function fetchMedia() {
         var xhr = new XMLHttpRequest();
@@ -174,6 +225,183 @@ Item {
 
         TapHandler {
             onTapped: root.forceActiveFocus()
+        }
+
+        header: Column {
+            width: GridView.view.width
+            spacing: 16
+            // Only show this entire section if there is actually data
+            visible: continueWatchingModel.count > 0
+
+            // Give it some bottom margin so it doesn't crowd the main grid
+            bottomPadding: 32
+
+            Text {
+                text: "Continue Watching"
+                color: Theme.textTitle
+                font.pixelSize: 22
+                font.bold: true
+                font.letterSpacing: 1
+            }
+
+            ListView {
+                width: parent.width
+                height: 190 // 140 for image + 50 for text
+                orientation: ListView.Horizontal
+                spacing: 24
+                model: continueWatchingModel
+
+                interactive: true
+
+                delegate: Item {
+                    width: 250 // 16:9 aspect ratio width
+                    height: 190
+
+                    z: cwMouseArea.containsMouse ? 10 : 0
+
+                    // The Hover Scale Animation Container
+                    Item {
+                        anchors.fill: parent
+                        scale: cwMouseArea.containsMouse ? 1.05 : 1.0
+                        Behavior on scale {
+                            NumberAnimation {
+                                duration: 200
+                                easing.type: Easing.OutQuart
+                            }
+                        }
+
+                        // The Image Container
+                        Item {
+                            id: cwImageContainer
+                            width: 250
+                            height: 140
+
+                            // Solid Background
+                            Rectangle {
+                                anchors.fill: parent
+                                radius: 12
+                                color: Theme.bgCard
+                            }
+
+                            // The Content to be masked (Image + Overlays)
+                            Item {
+                                id: contentToMask
+                                anchors.fill: parent
+                                anchors.margins: 1 // Keep inside the border
+                                visible: false // Hidden so MultiEffect can render it
+                                layer.enabled: true // Groups all children into one texture
+
+                                Image {
+                                    anchors.fill: parent
+                                    source: model.imageUrl
+                                    fillMode: Image.PreserveAspectCrop
+                                }
+
+                                // The Dark Overlay
+                                Rectangle {
+                                    anchors.bottom: parent.bottom
+                                    width: parent.width
+                                    height: 40
+                                    gradient: Gradient {
+                                        GradientStop {
+                                            position: 0.0
+                                            color: "transparent"
+                                        }
+                                        GradientStop {
+                                            position: 1.0
+                                            color: "#CC000000"
+                                        }
+                                    }
+                                }
+
+                                // The Progress Bar Track
+                                Rectangle {
+                                    anchors.bottom: parent.bottom
+                                    width: parent.width
+                                    height: 4
+                                    color: "transparent"
+                                }
+
+                                // The Progress Bar Fill
+                                Rectangle {
+                                    anchors.bottom: parent.bottom
+                                    anchors.left: parent.left
+                                    width: parent.width * (model.progress / 100)
+                                    height: 4
+                                    color: Theme.accent
+                                }
+                            }
+
+                            // The Mask
+                            Item {
+                                id: cwImageMask
+                                anchors.fill: contentToMask
+                                layer.enabled: true
+                                visible: false
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 11 // Inner radius
+                                    color: "black"
+                                }
+                            }
+
+                            // The MultiEffect (Renders everything beautifully rounded)
+                            MultiEffect {
+                                anchors.fill: contentToMask
+                                source: contentToMask
+                                maskEnabled: true
+                                maskSource: cwImageMask
+                            }
+
+                            // The Border (Rendered last so it sits on top)
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "transparent"
+                                radius: 12
+                                border.width: 1
+                                border.color: cwMouseArea.containsMouse ? Theme.borderHover : Theme.borderMain
+                            }
+                        }
+
+                        // The Text Container
+                        Column {
+                            anchors.top: cwImageContainer.bottom
+                            anchors.topMargin: 8
+                            width: parent.width
+                            spacing: 2
+
+                            Text {
+                                text: model.type === "episode" ? model.showTitle : model.title
+                                color: Theme.textPrimary
+                                font.pixelSize: 15
+                                font.bold: true
+                                width: parent.width
+                                elide: Text.ElideRight
+                            }
+                            Text {
+                                text: model.type === "episode" ? model.title : (model.progress + "% Complete")
+                                color: Theme.textSecondary
+                                font.pixelSize: 12
+                                width: parent.width
+                                elide: Text.ElideRight
+                            }
+                        }
+
+                        // The Click Handler
+                        MouseArea {
+                            id: cwMouseArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                let streamUrl = "http://127.0.0.1:8000/api/stream/" + model.fileId + "?direct_play=true";
+                                root.resumeMedia(streamUrl, model.fileId);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         model: mediaModel
