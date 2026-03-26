@@ -37,6 +37,7 @@ qt_add_qml_module(appMediaServerClient
 
     RESOURCES
         fullscreen.svg
+        check-circle.svg
 
 )
 

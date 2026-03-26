@@ -103,7 +103,8 @@ Item {
                     "title": item.title,
                     "posterUrl": item.poster_url || "",
                     "fileId": item.file_id || 0,
-                    "year": item.year ? item.year.toString() : "Unknown Year"
+                    "year": item.year ? item.year.toString() : "Unknown Year",
+                    "isCompleted": item.is_completed || false
                 });
             }
         }
@@ -490,6 +491,29 @@ Item {
                         radius: 12
                         border.width: 1
                         border.color: mouseArea.containsMouse ? Theme.borderHover : Theme.borderMain
+                    }
+
+                    // Watched Indicator
+                    Image {
+                        source: "check-circle.svg"
+                        width: 28
+                        height: 28
+
+                        // THE FIX: Tells the SVG engine to render at this exact resolution
+                        sourceSize.width: 28
+                        sourceSize.height: 28
+
+                        anchors.top: parent.top
+                        anchors.right: parent.right
+                        anchors.margins: 10
+                        visible: model.isCompleted && currentMode === "movies"
+
+                        Behavior on opacity {
+                            NumberAnimation {
+                                duration: 200
+                            }
+                        }
+                        opacity: visible ? 1.0 : 0.0
                     }
                 }
 

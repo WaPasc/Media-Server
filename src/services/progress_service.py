@@ -23,7 +23,8 @@ async def get_continue_watching(
         .options(
             selectinload(WatchProgress.media_file)
             .selectinload(MediaFile.movie)
-            .selectinload(Movie.files),
+            .selectinload(Movie.files)
+            .selectinload(MediaFile.progress),
             selectinload(WatchProgress.media_file)
             .selectinload(MediaFile.episode)
             .selectinload(Episode.season)
