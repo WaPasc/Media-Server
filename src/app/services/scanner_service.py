@@ -475,6 +475,20 @@ async def run_full_scan():
         logger.info('--- Global Scan Complete ---')
 
 
+async def delete_scan_directory(session: AsyncSession, directory_id: int) -> bool:
+    """Removes a monitored directory from the database."""
+    stmt = select(ScanDirectory).where(ScanDirectory.id == directory_id)
+    result = await session.execute(stmt)
+    directory = result.scalars().first()
+
+    if not directory:
+        return False  # Let the router know we couldn't find it
+
+    await session.delete(directory)
+    await session.commit()
+    return True
+
+
 if __name__ == '__main__':
     import sys
 

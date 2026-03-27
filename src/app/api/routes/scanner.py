@@ -1,4 +1,4 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_db
@@ -12,6 +12,15 @@ router = APIRouter(prefix='/api/scanner', tags=['scanner'])
 async def get_directories(db: AsyncSession = Depends(get_db)):
     """List all directories currently being monitored."""
     return await scanner_service.get_all_directories(db)
+
+
+@router.delete('/directories/{directory_id}', status_code=status.HTTP_204_NO_CONTENT)
+async def delete_directory(directory_id: int, db: AsyncSession = Depends(get_db)):
+    """Remove a directory from being monitored."""
+    success = await scanner_service.delete_scan_directory(db, directory_id)
+
+    if not success:
+        raise HTTPException(status_code=404, detail='Directory not found')
 
 
 @router.post('/directories', response_model=ScanDirectoryResponse)
