@@ -1,7 +1,9 @@
+from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import (
     CheckConstraint,
+    DateTime,
     ForeignKey,
     String,
     Text,
@@ -9,9 +11,10 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
+from app.utils.datetime import get_brussels_time
 
 if TYPE_CHECKING:
-    from models.user import WatchProgress
+    from app.models.user import WatchProgress
 
 
 class MediaFile(Base):
@@ -120,4 +123,18 @@ class TVShow(Base):
     # A show has many seasons
     seasons: Mapped[List['Season']] = relationship(
         back_populates='show', cascade='all, delete-orphan'
+    )
+
+
+class ScanDirectory(Base):
+    __tablename__ = 'scan_directories'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    path: Mapped[str] = mapped_column(String(1024), unique=True)
+    # movies or shows
+    media_type: Mapped[str] = mapped_column(String(20))
+
+    last_scanned: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=get_brussels_time
     )

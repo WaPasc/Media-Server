@@ -4,7 +4,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import movies, progress, shows, stream
+from app.api.routes import movies, progress, scanner, shows, stream
 from app.services.tmdb_client import TMDBClient
 
 CHUNK_SIZE = 1024 * 1024 * 2
@@ -40,6 +40,7 @@ app.include_router(shows.router)
 app.include_router(movies.router)
 app.include_router(stream.router)
 app.include_router(progress.router)
+app.include_router(scanner.router)
 
 
 if __name__ == '__main__':

@@ -4,13 +4,15 @@ from pathlib import Path
 from typing import Any
 
 from sqlalchemy import func
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.core.database import AsyncSessionLocal
 from app.metadata import extract_local_info
-from app.models.media import Episode, MediaFile, Movie, Season, TVShow
+from app.models.media import Episode, MediaFile, Movie, ScanDirectory, Season, TVShow
 from app.models.user import UserShowProgress, WatchProgress  # noqa: F401
 from app.services.tmdb_client import TMDBClient
+from app.utils.datetime import get_brussels_time
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
@@ -159,7 +161,8 @@ async def process_tv_file(
     stmt = select(MediaFile).where(MediaFile.file_path == abs_path)
     result = await session.execute(stmt)
     if result.scalars().first():
-        return  # Silently skip already scanned files to reduce log spam
+        logger.info(f'Skipping (already scanned): {file_path.name}')
+        return
 
     # Extract title + season/episode + technical data
     local_info = await asyncio.to_thread(extract_local_info, abs_path)
@@ -422,6 +425,54 @@ async def scan_tv_shows_directory(tv_shows_dir: str):
                     except Exception as e:
                         logger.error(f'Error processing {file_path.name}: {e}')
                         await session.rollback()
+
+
+async def get_all_directories(session: AsyncSession):
+    """Fetches all monitored directories from the database."""
+    result = await session.execute(select(ScanDirectory))
+    return result.scalars().all()
+
+
+async def add_scan_directory(session: AsyncSession, path: str, media_type: str):
+    """Adds a new directory to the database."""
+    new_dir = ScanDirectory(path=path, media_type=media_type)
+    session.add(new_dir)
+    await session.commit()
+    await session.refresh(new_dir)
+    return new_dir
+
+
+async def run_full_scan():
+    """Reads all directories from the DB and scans them based on their type."""
+    logger.info('Starting global background scan...')
+
+    async with AsyncSessionLocal() as session:
+        stmt = select(ScanDirectory)
+        result = await session.execute(stmt)
+        directories = result.scalars().all()
+
+        if not directories:
+            logger.warning(
+                'No directories found in database. Add one via the API first!'
+            )
+            return
+
+        for directory in directories:
+            logger.info(
+                f'--- Scanning Directory: {directory.path} ({directory.media_type}) ---'
+            )
+
+            if directory.media_type == 'movies':
+                await scan_movies_directory(directory.path)
+            elif directory.media_type == 'shows':
+                await scan_tv_shows_directory(directory.path)
+
+            # Update the last_scanned timestamp
+            directory.last_scanned = get_brussels_time()
+            session.add(directory)
+            await session.commit()
+
+        logger.info('--- Global Scan Complete ---')
 
 
 if __name__ == '__main__':

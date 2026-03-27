@@ -8,7 +8,7 @@ from app.models.base import Base
 from app.utils.datetime import get_brussels_time
 
 if TYPE_CHECKING:
-    from models.media import Episode, MediaFile, Season, TVShow
+    from app.models.media import Episode, MediaFile, Season, TVShow
 
 
 class UserShowProgress(Base):
