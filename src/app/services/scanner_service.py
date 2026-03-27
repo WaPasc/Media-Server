@@ -206,34 +206,49 @@ async def process_tv_file(
         )
 
         if not tv_show:
-            # Check TMDB
-            search_payload = await tmdb.search_tv_show(
-                show_title, first_air_date_year=local_year
-            )
+            # Broad Search: Do not pass the year to the API.
+            # This ensures TMDB returns the most popular shows first.
+            search_payload = await tmdb.search_tv_show(show_title)
             search_results = search_payload.get('results', [])
-
-            if not search_results and local_year:
-                search_payload = await tmdb.search_tv_show(show_title)
-                search_results = search_payload.get('results', [])
 
             if not search_results:
                 logger.warning(f'No TMDB results found for TV show: {show_title}')
                 return
 
-            best_match = next(
-                (
-                    c
-                    for c in search_results[:5]
-                    if _normalize_title(c.get('name', '')) == title_key
-                ),
-                search_results[0],
-            )
+            best_match = None
+
+            # Strict Match: Look for exact Title and exact Year
+            if local_year:
+                for candidate in search_results:
+                    cand_name = _normalize_title(candidate.get('name', ''))
+                    first_air = candidate.get('first_air_date', '')
+                    cand_year = int(first_air[:4]) if first_air[:4].isdigit() else None
+
+                    if cand_name == title_key and cand_year == local_year:
+                        best_match = candidate
+                        break
+
+            # Looser Match: If no year matched, just find the exact Title.
+            # (Because we didn't filter by year in the API, the most popular
+            # show will be picked).
+            if not best_match:
+                for candidate in search_results:
+                    if _normalize_title(candidate.get('name', '')) == title_key:
+                        best_match = candidate
+                        break
+
+            # Ultimate Fallback: Trust TMDB's first result
+            if not best_match:
+                logger.warning(
+                    f"No exact match for '{show_title}'. Trusting TMDB's top result."
+                )
+                best_match = search_results[0]
 
             show_tmdb_id = best_match['id']
             show_data = await tmdb.get_tv_show(show_tmdb_id)
 
             first_air_date = show_data.get('first_air_date') or best_match.get(
-                'first_air_date'
+                'first_air_date', ''
             )
             parsed_year = (
                 int(first_air_date[:4])
