@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.dependencies import get_db, get_tmdb_client
-from schemas.shows import ShowDetailResponse, ShowResponse
-from services.show_service import get_all_shows, get_show_by_id
-from services.tmdb_client import TMDBClient
+from app.api.dependencies import get_db, get_tmdb_client
+from app.schemas.shows import ShowDetailResponse, ShowResponse
+from app.services.show_service import get_all_shows, get_show_by_id
+from app.services.tmdb_client import TMDBClient
 
 router = APIRouter(prefix='/api', tags=['shows'])
 

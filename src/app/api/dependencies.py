@@ -3,8 +3,8 @@ from typing import AsyncGenerator
 from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.database import AsyncSessionLocal
-from services.tmdb_client import TMDBClient
+from app.core.database import AsyncSessionLocal
+from app.services.tmdb_client import TMDBClient
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:

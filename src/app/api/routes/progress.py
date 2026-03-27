@@ -1,20 +1,20 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.dependencies import get_db, get_tmdb_client
-from mappers.progress_mapper import map_continue_watching
-from schemas.progress import (
+from app.api.dependencies import get_db, get_tmdb_client
+from app.mappers.progress_mapper import map_continue_watching
+from app.schemas.progress import (
     ContinueWatchingItem,
     ProgressResponse,
     ProgressUpdate,
     ProgressUpdateResponse,
 )
-from services.progress_service import (
+from app.services.progress_service import (
     get_continue_watching,
     get_progress_for_file,
     upsert_watch_progress,
 )
-from services.tmdb_client import TMDBClient
+from app.services.tmdb_client import TMDBClient
 
 router = APIRouter(prefix='/api', tags=['progress'])
 

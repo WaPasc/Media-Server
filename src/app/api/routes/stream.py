@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.dependencies import get_db
-from services.stream_service import get_media_file_path
-from utils.video import generate_ffmpeg_stream
+from app.api.dependencies import get_db
+from app.services.stream_service import get_media_file_path
+from app.utils.video import generate_ffmpeg_stream
 
 router = APIRouter(prefix='/api', tags=['stream'])
 

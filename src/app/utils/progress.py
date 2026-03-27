@@ -1,4 +1,4 @@
-from models.user import WatchProgress
+from app.models.user import WatchProgress
 
 
 def calculate_progress_percentage(progress: WatchProgress) -> float:

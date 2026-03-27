@@ -4,8 +4,8 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routes import movies, progress, shows, stream
-from services.tmdb_client import TMDBClient
+from app.api.routes import movies, progress, shows, stream
+from app.services.tmdb_client import TMDBClient
 
 CHUNK_SIZE = 1024 * 1024 * 2
 

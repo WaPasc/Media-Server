@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
-from models.media import Movie
-from services.tmdb_client import TMDBClient
+from app.models.media import Movie
+from app.services.tmdb_client import TMDBClient
 
 
 class MovieResponse(BaseModel):

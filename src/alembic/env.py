@@ -1,23 +1,15 @@
 import asyncio
 import logging
-import os
-import sys
-
-current_dir = os.path.dirname(os.path.abspath(__file__))
-src_dir = os.path.dirname(current_dir)
-sys.path.insert(0, src_dir)
 
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
-
-# Now these imports will work perfectly from the root folder!
-from core.database import SQLALCHEMY_DATABASE_URL
-from models.base import Base
-from models.media import *
-from models.user import *
+from app.core.database import SQLALCHEMY_DATABASE_URL
+from app.models.base import Base
+from app.models.media import *  # noqa: F403
+from app.models.user import *  # noqa: F403
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

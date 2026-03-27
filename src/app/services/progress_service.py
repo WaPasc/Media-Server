@@ -2,10 +2,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from models.media import Episode, MediaFile, Movie, Season
-from models.user import WatchProgress
-from schemas.progress import ProgressUpdate
-from utils.progress import check_is_completed
+from app.models.media import Episode, MediaFile, Movie, Season
+from app.models.user import WatchProgress
+from app.schemas.progress import ProgressUpdate
+from app.utils.progress import check_is_completed
 
 
 async def get_continue_watching(

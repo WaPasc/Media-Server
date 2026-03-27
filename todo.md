@@ -1,5 +1,8 @@
 # Todo List
 
+## Scanner
+- [ ] Improve Scanner for TV Shows: Now it's not accurate
+
 ## Continue Watching
 - [ ] Progress Bar: Implement a progress bar to visually indicate how much of the video has been watched.
 - [ ] Button to Continue: Add a button that allows users to easily continue watching from where they left off.

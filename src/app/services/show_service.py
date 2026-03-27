@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
-from models.media import Episode, MediaFile, Season, TVShow
+from app.models.media import Episode, MediaFile, Season, TVShow
 
 
 async def get_all_shows(db: AsyncSession) -> list[TVShow]:

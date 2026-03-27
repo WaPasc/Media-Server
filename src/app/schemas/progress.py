@@ -2,8 +2,8 @@ from typing import Literal, Union
 
 from pydantic import BaseModel
 
-from schemas.movies import MovieResponse
-from schemas.shows import EpisodeResponse, ShowResponse
+from app.schemas.movies import MovieResponse
+from app.schemas.shows import EpisodeResponse, ShowResponse
 
 
 class ProgressUpdate(BaseModel):

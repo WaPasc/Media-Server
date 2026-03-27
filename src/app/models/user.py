@@ -4,8 +4,8 @@ from typing import TYPE_CHECKING, Optional
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from models.base import Base
-from utils.datetime import get_brussels_time
+from app.models.base import Base
+from app.utils.datetime import get_brussels_time
 
 if TYPE_CHECKING:
     from models.media import Episode, MediaFile, Season, TVShow

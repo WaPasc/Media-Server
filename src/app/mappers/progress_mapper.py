@@ -1,13 +1,13 @@
-from models.user import WatchProgress
-from schemas.movies import MovieResponse
-from schemas.progress import (
+from app.models.user import WatchProgress
+from app.schemas.movies import MovieResponse
+from app.schemas.progress import (
     ContinueWatchingEpisode,
     ContinueWatchingItem,
     ContinueWatchingMovie,
 )
-from schemas.shows import EpisodeResponse, ShowResponse
-from services.tmdb_client import TMDBClient
-from utils.progress import calculate_progress_percentage
+from app.schemas.shows import EpisodeResponse, ShowResponse
+from app.services.tmdb_client import TMDBClient
+from app.utils.progress import calculate_progress_percentage
 
 
 def build_base(progress: WatchProgress) -> dict:

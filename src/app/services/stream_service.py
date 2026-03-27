@@ -3,7 +3,7 @@ import os
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from models.media import MediaFile
+from app.models.media import MediaFile
 
 
 async def get_media_file_path(db: AsyncSession, file_id: int) -> str | None:
