@@ -1,6 +1,6 @@
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.15
 
 Rectangle {
     id: root
@@ -8,16 +8,32 @@ Rectangle {
 
     signal backClicked
 
-    // Replace with actual backend URL
     property string apiUrl: "http://127.0.0.1:8000/api/scanner"
 
-    // HEADER
-    Item {
+    ListModel {
+        id: directoryModel
+    }
+
+    Component.onCompleted: fetchDirectories()
+
+    // --- HEADER ---
+    Rectangle {
         id: header
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
         height: 80
+        color: Theme.bgBase
+        z: 10 // Keep header above scrolling content
+
+        // Subtle border to separate header from scroll content
+        Rectangle {
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            height: 1
+            color: Theme.borderMain
+        }
 
         Button {
             id: backBtn
@@ -31,7 +47,7 @@ Rectangle {
                 font.pixelSize: 16
                 font.bold: true
             }
-            background: Item {} // Transparent background
+            background: Item {}
 
             onClicked: root.backClicked()
             MouseArea {
@@ -50,304 +66,462 @@ Rectangle {
         }
     }
 
-    // MAIN CONTENT
-    ColumnLayout {
+    // --- MAIN CONTENT ---
+    // ScrollView now spans the ENTIRE width and height below the header
+    ScrollView {
         anchors.top: header.bottom
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.topMargin: 20
-        width: 500
-        spacing: 30
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        clip: true
+        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 
-        // ADD DIRECTORY CARD
-        Rectangle {
-            Layout.fillWidth: true
-            height: 320
-            color: Theme.bgCard
-            border.color: Theme.borderMain
-            border.width: 1
-            radius: 12
+        // Tells the scroll view to fill the available width, enabling scrolling from anywhere
+        contentWidth: availableWidth
 
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 25
-                spacing: 15
+        ColumnLayout {
+            // Centers the content, but gives it a wider, more breathable 650px maximum
+            width: Math.min(650, parent.width - 60)
+            anchors.horizontalCenter: parent.horizontalCenter
+            spacing: 40 // Generous spacing between the cards
 
-                Text {
-                    text: "Add Media Directory"
-                    color: Theme.textPrimary
-                    font.pixelSize: 18
-                    font.bold: true
-                }
+            // Top Margin Spacer
+            Item {
+                Layout.preferredHeight: 20
+            }
 
-                Text {
-                    text: "Tell the media server where to look for your files."
-                    color: Theme.textSecondary
-                    font.pixelSize: 14
-                    Layout.bottomMargin: 10
-                }
+            // ADD DIRECTORY CARD
+            Rectangle {
+                Layout.fillWidth: true
+                // Dynamic height based on content + margins
+                Layout.preferredHeight: addDirLayout.implicitHeight + 60
+                color: Theme.bgCard
+                border.color: Theme.borderMain
+                border.width: 1
+                radius: 12
 
-                // PATH INPUT
-                TextField {
-                    id: pathInput
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 45
-                    placeholderText: "/path/to/media"
-                    color: Theme.textColor
-                    font.pixelSize: 14
-                    leftPadding: 15
+                ColumnLayout {
+                    id: addDirLayout
+                    anchors.top: parent.top
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.margins: 30 // Wider inner margins
+                    spacing: 20
 
-                    background: Rectangle {
-                        color: Theme.bgBase
-                        border.color: pathInput.activeFocus ? Theme.accent : Theme.borderInput
-                        border.width: 1
-                        radius: 8
+                    Text {
+                        text: "Add Media Directory"
+                        color: Theme.textPrimary
+                        font.pixelSize: 18
+                        font.bold: true
                     }
-                }
 
-                // MEDIA TYPE COMBOBOX
-                ComboBox {
-                    id: mediaTypeCombo
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 45
-                    model: ["movies", "shows"]
+                    Text {
+                        text: "Tell the media server where to look for your files."
+                        color: Theme.textSecondary
+                        font.pixelSize: 14
+                    }
 
-                    contentItem: Text {
-                        text: mediaTypeCombo.displayText
+                    TextField {
+                        id: pathInput
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 45
+                        Layout.topMargin: 10
+                        placeholderText: "/path/to/media"
                         color: Theme.textColor
                         font.pixelSize: 14
-                        verticalAlignment: Text.AlignVCenter
                         leftPadding: 15
-                        elide: Text.ElideRight
-                    }
-
-                    background: Rectangle {
-                        color: Theme.bgBase
-                        border.color: mediaTypeCombo.activeFocus || mediaTypeCombo.popup.visible ? Theme.accent : Theme.borderInput
-                        border.width: 1
-                        radius: 8
-
-                        // Smoothly transition the border glow
-                        Behavior on border.color {
-                            ColorAnimation {
-                                duration: 150
-                            }
-                        }
-                    }
-
-                    indicator: Canvas {
-                        id: canvas
-                        x: mediaTypeCombo.width - width - 15
-                        y: mediaTypeCombo.topPadding + (mediaTypeCombo.availableHeight - height) / 2
-                        width: 10
-                        height: 6
-                        contextType: "2d"
-
-                        Connections {
-                            target: mediaTypeCombo
-                            function onPressedChanged() {
-                                canvas.requestPaint();
-                            }
-                        }
-
-                        onPaint: {
-                            var context = canvas.getContext("2d");
-                            context.reset();
-                            context.moveTo(0, 0);
-                            context.lineTo(width, 0);
-                            context.lineTo(width / 2, height);
-                            context.closePath();
-                            // Keep it highlighted while the menu is open
-                            context.fillStyle = mediaTypeCombo.pressed || mediaTypeCombo.popup.visible ? Theme.textPrimary : Theme.textSecondary;
-                            context.fill();
-                        }
-                    }
-
-                    popup: Popup {
-                        y: mediaTypeCombo.height + 4
-                        width: mediaTypeCombo.width
-                        // calculate height to prevent layout snapping
-                        implicitHeight: Math.min(contentItem.contentHeight + topPadding + bottomPadding, 200)
-                        padding: 4
-
-                        // Smooth fade-in and fade-out animations
-                        enter: Transition {
-                            NumberAnimation {
-                                property: "opacity"
-                                from: 0.0
-                                to: 1.0
-                                duration: 150
-                                easing.type: Easing.OutQuad
-                            }
-                        }
-                        exit: Transition {
-                            NumberAnimation {
-                                property: "opacity"
-                                from: 1.0
-                                to: 0.0
-                                duration: 100
-                                easing.type: Easing.InQuad
-                            }
-                        }
-
-                        contentItem: ListView {
-                            clip: true
-                            // Keep the model permanently attached so it doesn't rebuild and jump on click
-                            model: mediaTypeCombo.delegateModel
-                            currentIndex: mediaTypeCombo.highlightedIndex
-                            ScrollIndicator.vertical: ScrollIndicator {}
-                        }
 
                         background: Rectangle {
-                            color: Theme.bgCard
-                            border.color: Theme.borderMain
+                            color: Theme.bgBase
+                            border.color: pathInput.activeFocus ? Theme.accent : Theme.borderInput
                             border.width: 1
                             radius: 8
                         }
                     }
-                    delegate: ItemDelegate {
-                        id: itemDelegate
-                        width: ListView.view.width
-                        height: 40
-                        hoverEnabled: true
+
+                    ComboBox {
+                        id: mediaTypeCombo
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 45
+                        model: ["movies", "shows"]
 
                         contentItem: Text {
-                            text: modelData
-                            // Check BOTH hovered (mouse) and highlighted (keyboard)
-                            color: itemDelegate.hovered || itemDelegate.highlighted ? Theme.textTitle : Theme.textColor
+                            text: mediaTypeCombo.displayText
+                            color: Theme.textColor
                             font.pixelSize: 14
                             verticalAlignment: Text.AlignVCenter
-                            leftPadding: 11
-
-                            Behavior on color {
-                                ColorAnimation {
-                                    duration: 100
-                                }
-                            }
+                            leftPadding: 15
                         }
 
                         background: Rectangle {
-                            // Smoothly shift between the two solid card colors
-                            color: itemDelegate.hovered || itemDelegate.highlighted ? Theme.bgCardHover : Theme.bgCard
-                            radius: 4
+                            color: Theme.bgBase
+                            border.color: mediaTypeCombo.activeFocus || mediaTypeCombo.popup.visible ? Theme.accent : Theme.borderInput
+                            border.width: 1
+                            radius: 8
+                            Behavior on border.color {
+                                ColorAnimation {
+                                    duration: 150
+                                }
+                            }
+                        }
 
+                        indicator: Canvas {
+                            id: canvas
+                            x: mediaTypeCombo.width - width - 15
+                            y: mediaTypeCombo.topPadding + (mediaTypeCombo.availableHeight - height) / 2
+                            width: 10
+                            height: 6
+                            contextType: "2d"
+
+                            Connections {
+                                target: mediaTypeCombo
+                                function onPressedChanged() {
+                                    canvas.requestPaint();
+                                }
+                            }
+
+                            onPaint: {
+                                var context = canvas.getContext("2d");
+                                context.reset();
+                                context.moveTo(0, 0);
+                                context.lineTo(width, 0);
+                                context.lineTo(width / 2, height);
+                                context.closePath();
+                                context.fillStyle = mediaTypeCombo.pressed || mediaTypeCombo.popup.visible ? Theme.textPrimary : Theme.textSecondary;
+                                context.fill();
+                            }
+                        }
+
+                        popup: Popup {
+                            y: mediaTypeCombo.height + 4
+                            width: mediaTypeCombo.width
+                            implicitHeight: Math.min(contentItem.contentHeight + topPadding + bottomPadding, 200)
+                            padding: 4
+
+                            enter: Transition {
+                                NumberAnimation {
+                                    property: "opacity"
+                                    from: 0.0
+                                    to: 1.0
+                                    duration: 150
+                                    easing.type: Easing.OutQuad
+                                }
+                            }
+                            exit: Transition {
+                                NumberAnimation {
+                                    property: "opacity"
+                                    from: 1.0
+                                    to: 0.0
+                                    duration: 100
+                                    easing.type: Easing.InQuad
+                                }
+                            }
+
+                            contentItem: ListView {
+                                clip: true
+                                model: mediaTypeCombo.delegateModel
+                                currentIndex: mediaTypeCombo.highlightedIndex
+                            }
+
+                            background: Rectangle {
+                                color: Theme.bgCard
+                                border.color: Theme.borderMain
+                                border.width: 1
+                                radius: 8
+                            }
+                        }
+
+                        delegate: ItemDelegate {
+                            id: itemDelegate
+                            width: ListView.view.width
+                            height: 40
+                            hoverEnabled: true
+
+                            contentItem: Text {
+                                text: modelData
+                                color: itemDelegate.hovered || itemDelegate.highlighted ? Theme.textTitle : Theme.textColor
+                                font.pixelSize: 14
+                                verticalAlignment: Text.AlignVCenter
+                                leftPadding: 11
+                                Behavior on color {
+                                    ColorAnimation {
+                                        duration: 100
+                                    }
+                                }
+                            }
+
+                            background: Rectangle {
+                                color: itemDelegate.hovered || itemDelegate.highlighted ? Theme.bgCardHover : Theme.bgCard
+                                radius: 4
+                                Behavior on color {
+                                    ColorAnimation {
+                                        duration: 100
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Button {
+                        id: addBtn
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 45
+                        Layout.topMargin: 15
+
+                        contentItem: Text {
+                            text: "Add Directory"
+                            color: "white"
+                            font.pixelSize: 14
+                            font.bold: true
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        background: Rectangle {
+                            color: addBtn.hovered ? Theme.accentLight : Theme.accent
+                            radius: 8
                             Behavior on color {
                                 ColorAnimation {
-                                    duration: 100
+                                    duration: 150
+                                }
+                            }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: addDirectory(pathInput.text, mediaTypeCombo.currentText)
+                        }
+                    }
+
+                    Label {
+                        id: statusLabel
+                        text: ""
+                        color: Theme.textMuted
+                        font.pixelSize: 14
+                        Layout.alignment: Qt.AlignHCenter
+                    }
+                }
+            }
+
+            //  SCAN ACTION CARD
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: scanLayout.implicitHeight + 60
+                color: Theme.bgCard
+                border.color: Theme.borderMain
+                border.width: 1
+                radius: 12
+
+                ColumnLayout {
+                    id: scanLayout
+                    anchors.top: parent.top
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.margins: 30
+                    spacing: 20
+
+                    Text {
+                        text: "Library Scan"
+                        color: Theme.textPrimary
+                        font.pixelSize: 18
+                        font.bold: true
+                    }
+
+                    Text {
+                        text: "Manually force the server to scan all directories for new media."
+                        color: Theme.textSecondary
+                        font.pixelSize: 14
+                    }
+
+                    Button {
+                        id: scanBtn
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 45
+                        Layout.topMargin: 10
+
+                        contentItem: Text {
+                            text: "Trigger Full Library Scan"
+                            color: Theme.textColor
+                            font.pixelSize: 14
+                            font.bold: true
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        background: Rectangle {
+                            color: scanBtn.hovered ? Theme.bgCardHover : Theme.bgBase
+                            border.color: scanBtn.hovered ? Theme.borderHover : Theme.borderMain
+                            border.width: 1
+                            radius: 8
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: 150
+                                }
+                            }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: triggerScan()
+                        }
+                    }
+                }
+            }
+
+            // MONITORED DIRECTORIES
+            Rectangle {
+                Layout.fillWidth: true
+                // Let the card grow naturally with its content instead of using a fixed height
+                Layout.preferredHeight: dirsColumn.implicitHeight + 60
+                color: Theme.bgCard
+                border.color: Theme.borderMain
+                border.width: 1
+                radius: 12
+                visible: directoryModel.count > 0
+
+                ColumnLayout {
+                    id: dirsColumn
+                    anchors.top: parent.top
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.margins: 30
+                    spacing: 20
+
+                    Text {
+                        text: "Monitored Directories"
+                        color: Theme.textPrimary
+                        font.pixelSize: 18
+                        font.bold: true
+                    }
+
+                    // This merges the items into the main page so there is only ONE smooth scrollbar
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 12
+
+                        Repeater {
+                            model: directoryModel
+
+                            delegate: Rectangle {
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 50
+                                color: Theme.bgBase
+                                border.color: Theme.borderMain
+                                border.width: 1
+                                radius: 8
+
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.margins: 12
+                                    spacing: 15
+
+                                    Rectangle {
+                                        width: 60
+                                        height: 24
+                                        radius: 12
+                                        color: model.media_type === "movies" ? "#3B82F6" : "#10B981"
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: model.media_type.toUpperCase()
+                                            color: "white"
+                                            font.pixelSize: 10
+                                            font.bold: true
+                                        }
+                                    }
+
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: model.path
+                                        color: Theme.textColor
+                                        font.pixelSize: 14
+                                        elide: Text.ElideMiddle
+                                    }
+
+                                    Button {
+                                        id: delBtn
+                                        Layout.preferredWidth: 80
+                                        Layout.preferredHeight: 32
+
+                                        contentItem: Text {
+                                            text: "Remove"
+                                            color: delBtn.hovered ? "#FFFFFF" : "#EF4444"
+                                            font.pixelSize: 12
+                                            font.bold: true
+                                            horizontalAlignment: Text.AlignHCenter
+                                            verticalAlignment: Text.AlignVCenter
+                                        }
+
+                                        background: Rectangle {
+                                            color: delBtn.hovered ? "#EF4444" : "transparent"
+                                            border.color: "#EF4444"
+                                            border.width: 1
+                                            radius: 6
+                                            Behavior on color {
+                                                ColorAnimation {
+                                                    duration: 150
+                                                }
+                                            }
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: deleteDirectory(model.id)
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 }
-
-                // SUBMIT BUTTON
-                Button {
-                    id: addBtn
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 45
-                    Layout.topMargin: 10
-
-                    contentItem: Text {
-                        text: "Add Directory"
-                        color: "white"
-                        font.pixelSize: 14
-                        font.bold: true
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
-                    background: Rectangle {
-                        color: addBtn.hovered ? Theme.accentLight : Theme.accent
-                        radius: 8
-
-                        Behavior on color {
-                            ColorAnimation {
-                                duration: 150
-                            }
-                        }
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: addDirectory(pathInput.text, mediaTypeCombo.currentText)
-                    }
-                }
-
-                // STATUS LABEL
-                Label {
-                    id: statusLabel
-                    text: ""
-                    color: Theme.textMuted
-                    font.pixelSize: 14
-                    Layout.alignment: Qt.AlignHCenter
-                }
             }
-        }
 
-        // SCAN ACTION CARD
-        Rectangle {
-            Layout.fillWidth: true
-            height: 140
-            color: Theme.bgCard
-            border.color: Theme.borderMain
-            border.width: 1
-            radius: 12
-
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 25
-                spacing: 15
-
-                Text {
-                    text: "Library Scan"
-                    color: Theme.textPrimary
-                    font.pixelSize: 18
-                    font.bold: true
-                }
-
-                Button {
-                    id: scanBtn
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 45
-
-                    contentItem: Text {
-                        text: "Trigger Full Library Scan"
-                        color: Theme.textColor
-                        font.pixelSize: 14
-                        font.bold: true
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
-                    background: Rectangle {
-                        // Lighter border when hovered, dark card background otherwise
-                        color: scanBtn.hovered ? Theme.bgCardHover : Theme.bgBase
-                        border.color: scanBtn.hovered ? Theme.borderHover : Theme.borderMain
-                        border.width: 1
-                        radius: 8
-
-                        Behavior on color {
-                            ColorAnimation {
-                                duration: 150
-                            }
-                        }
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: triggerScan()
-                    }
-                }
+            // Bottom Margin Spacer to ensure you can scroll past the last item
+            Item {
+                Layout.preferredHeight: 60
             }
         }
     }
 
     // API LOGIC
+    function fetchDirectories() {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", apiUrl + "/directories");
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+                var dirs = JSON.parse(xhr.responseText);
+                directoryModel.clear();
+                for (var i = 0; i < dirs.length; i++) {
+                    directoryModel.append(dirs[i]);
+                }
+            }
+        };
+        xhr.send();
+    }
+
+    function deleteDirectory(id) {
+        var xhr = new XMLHttpRequest();
+        xhr.open("DELETE", apiUrl + "/directories/" + id);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE) {
+                if (xhr.status === 204 || xhr.status === 200) {
+                    fetchDirectories();
+                } else {
+                    statusLabel.text = "Failed to remove directory.";
+                    statusLabel.color = "#EF4444";
+                }
+            }
+        };
+        xhr.send();
+    }
+
     function addDirectory(path, type) {
         if (path.trim() === "") {
             statusLabel.text = "Path cannot be empty!";
-            statusLabel.color = "#EF4444"; // Explicit red for error
+            statusLabel.color = "#EF4444";
             return;
         }
 
@@ -359,11 +533,12 @@ Rectangle {
             if (xhr.readyState === XMLHttpRequest.DONE) {
                 if (xhr.status === 200) {
                     statusLabel.text = "Directory added successfully!";
-                    statusLabel.color = "#10B981"; // Emerald green for success
+                    statusLabel.color = "#10B981";
                     pathInput.text = "";
+                    fetchDirectories();
                 } else {
                     statusLabel.text = "Error: " + xhr.responseText;
-                    statusLabel.color = "#EF4444"; // Red for error
+                    statusLabel.color = "#EF4444";
                 }
             }
         };
@@ -385,7 +560,7 @@ Rectangle {
             if (xhr.readyState === XMLHttpRequest.DONE) {
                 if (xhr.status === 200) {
                     statusLabel.text = "Scan started! Check backend logs.";
-                    statusLabel.color = "#10B981"; // Emerald green
+                    statusLabel.color = "#10B981";
                 } else {
                     statusLabel.text = "Failed to start scan.";
                     statusLabel.color = "#EF4444";
