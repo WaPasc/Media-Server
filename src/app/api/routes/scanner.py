@@ -5,7 +5,7 @@ from app.api.dependencies import get_db
 from app.schemas.scanner import ScanDirectoryCreate, ScanDirectoryResponse
 from app.services import scanner_service
 
-router = APIRouter(prefix='/scanner', tags=['scanner'])
+router = APIRouter(prefix='/api/scanner', tags=['scanner'])
 
 
 @router.get('/directories', response_model=list[ScanDirectoryResponse])

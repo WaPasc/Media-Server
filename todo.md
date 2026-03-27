@@ -1,8 +1,5 @@
 # Todo List
 
-## Scanner
-- [ ] Improve Scanner for TV Shows: Now it's not accurate
-
 ## Continue Watching
 - [ ] Progress Bar: Implement a progress bar to visually indicate how much of the video has been watched.
 - [ ] Button to Continue: Add a button that allows users to easily continue watching from where they left off.
@@ -18,9 +15,7 @@
 
 ## Library & Media Management
 - [ ] Soft Delete: Update the database models so that deleting a file flips an `is_available = False` flag instead of erasing the row entirely (ensures watch history and ratings are preserved).
-- [ ] Directory Rescanner: Implement a feature that allows users to rescan their media directories to update the library with any new or removed files.
 - [ ] Add Manual Path: Add a button in the desktop app to add a manual file path to the library.
-- [ ] Watch History System: Create a system to track which videos have been watched.
 - [ ] Media Engine Upgrade: Remove basic scripting and replace with a more robust solution for handling media files, such as a dedicated media management library or service.
 
 ## User Management

@@ -13,6 +13,7 @@ QtObject {
     readonly property color borderHover: "#525252"
 
     // Text Colors
+    readonly property color textColor: "#EAEAEA"
     readonly property color textTitle: "white"
     readonly property color textPrimary: "#F5F5F5"
     readonly property color textHover: "#D4D4D8"

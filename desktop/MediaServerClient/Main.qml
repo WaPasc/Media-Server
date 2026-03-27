@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Window
+import QtQuick.Controls
 
 Window {
     id: mainWindow
@@ -30,6 +31,29 @@ Window {
             library.forceActiveFocus();
         }
     }
+
+    Button {
+            id: settingsButton
+            anchors.top: parent.top
+            anchors.right: parent.right
+            anchors.margins: 20
+            width: 40
+            height: 40
+            visible: currentScreen === "library" // Only show on the main library page
+            z: 100 // Ensure it sits on top
+
+            background: Rectangle {
+                color: settingsButton.hovered ? "#333333" : "transparent"
+                radius: 20
+            }
+
+            icon.source: "settings.svg"
+            icon.color: "#EAEAEA" // Make the SVG match our text color
+            icon.width: 24
+            icon.height: 24
+
+            onClicked: currentScreen = "settings"
+        }
 
     LibraryScreen {
         id: library
@@ -100,6 +124,16 @@ Window {
         }
         onFullscreenRequested: {
             toggleFullscreen();
+        }
+    }
+
+    SettingsScreen {
+        id: settingsScreen
+        anchors.fill: parent
+        visible: currentScreen === "settings"
+
+        onBackClicked: {
+            currentScreen = "library"
         }
     }
 }

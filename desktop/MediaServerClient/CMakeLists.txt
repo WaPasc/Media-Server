@@ -28,6 +28,7 @@ qt_add_qml_module(appMediaServerClient
         PlayerScreen.qml
         ShowDetailScreen.qml
         MovieDetailScreen.qml
+        SettingsScreen.qml
         Theme.qml
 
 
@@ -38,6 +39,8 @@ qt_add_qml_module(appMediaServerClient
     RESOURCES
         fullscreen.svg
         check-circle.svg
+        settings.svg
+
 
 )
 
