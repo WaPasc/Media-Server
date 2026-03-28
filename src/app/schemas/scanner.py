@@ -20,3 +20,8 @@ class ScanDirectoryResponse(ScanDirectoryBase):
 
     class Config:
         from_attributes = True
+
+
+class ScanAvailabilityResponse(BaseModel):
+    status: str
+    message: str

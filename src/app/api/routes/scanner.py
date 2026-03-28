@@ -2,8 +2,13 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_db
-from app.schemas.scanner import ScanDirectoryCreate, ScanDirectoryResponse
+from app.schemas.scanner import (
+    ScanAvailabilityResponse,
+    ScanDirectoryCreate,
+    ScanDirectoryResponse,
+)
 from app.services import scanner_service
+from app.services.availability_service import scan_library_availability
 
 router = APIRouter(prefix='/api/scanner', tags=['scanner'])
 
@@ -45,3 +50,21 @@ async def trigger_scan(background_tasks: BackgroundTasks):
     return {
         'message': 'Scan started in the background. Check server logs for progress.'
     }
+
+
+@router.post('/scan-availability')
+async def trigger_availability_check(
+    background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)
+):
+    """
+    Scans the library to ensure files still exist.
+    Flags missing files as unavailable instead of deleting them.
+    """
+
+    # We pass this to FastAPI's background tasks so the API returns instantly,
+    # and the scan happens behind the scenes
+    background_tasks.add_task(scan_library_availability, db)
+
+    return ScanAvailabilityResponse(
+        status='success', message='Availability check started in the background.'
+    )
