@@ -88,7 +88,8 @@ Item {
                 "epOverview": ep.overview || "No description available.",
                 "fileId": ep.file_id || -1,
                 "stillUrl": ep.still_url || backdropUrl || "",
-                "isCompleted": ep.is_completed || false
+                "isCompleted": ep.is_completed || false,
+                "isAvailable": ep.is_available !== undefined ? ep.is_available : true
             });
         }
     }
@@ -299,7 +300,7 @@ Item {
                         radius: 12
                         color: mouseArea.containsMouse ? Theme.bgCardHover : Theme.bgBlack
                         border.color: mouseArea.containsMouse ? Theme.accent : Theme.borderDark
-                        opacity: model.fileId !== -1 ? 1.0 : 0.6
+                        opacity: model.isAvailable ? 1.0 : 0.6
 
                         // Thumbnail container (anchored flatly to the left)
                         Item {
@@ -350,6 +351,30 @@ Item {
                                 maskSource: imageMask
                                 visible: model.stillUrl !== ""
                             }
+
+                            // MISSING FILE OVERLAY: Darken the thumbnail
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "black"
+                                radius: 8
+                                opacity: 0.65
+                                visible: !model.isAvailable
+                            }
+
+                            // MISSING FILE OVERLAY: The Red Video-Off Icon
+                            Button {
+                                anchors.centerIn: parent
+                                icon.source: "missing.svg"
+                                icon.color: "red"
+                                width: 36
+                                height: 36
+                                icon.width: 36
+                                icon.height: 36
+                                opacity: 0.8
+                                visible: !model.isAvailable
+                                enabled: false
+                                background: Item {} // Removes button styling!
+                            }
                         }
 
                         // Text column (anchored flatly next to the thumbnail)
@@ -374,7 +399,7 @@ Item {
                                     font.bold: true
                                 }
                                 Rectangle {
-                                    visible: model.fileId === -1
+                                    visible: !model.isAvailable
                                     width: 80
                                     height: 18
                                     radius: 9
@@ -434,8 +459,16 @@ Item {
                             id: mouseArea
                             anchors.fill: parent
                             hoverEnabled: true
-                            cursorShape: model.fileId !== -1 ? Qt.PointingHandCursor : Qt.ArrowCursor
+                            // Change to the red slash cursor
+                            cursorShape: model.isAvailable ? Qt.PointingHandCursor : Qt.ForbiddenCursor
+
                             onClicked: {
+                                // Block the click if missing
+                                if (!model.isAvailable) {
+                                    console.log("Episode missing! Cannot open.");
+                                    return;
+                                }
+
                                 if (model.fileId !== -1) {
                                     let streamUrl = "http://127.0.0.1:8000/api/stream/" + model.fileId + "?direct_play=true";
                                     root.episodePlay(streamUrl, model.fileId);
