@@ -14,12 +14,17 @@ Item {
     property bool cursorVisible: true
     property int currentFileId: -1
 
+    property double currentVolume: 100.0
+    property bool isMuted: false
+
     // Force the player to steal keyboard focus whenever it opens
     onVisibleChanged: {
         if (visible) {
-            root.forceActiveFocus()
+            root.forceActiveFocus();
         }
     }
+
+    // KEYBOARD SHORTCUTS
 
     // Add 'event' to the parameter list so we can accept the keystroke
     Keys.onSpacePressed: event => {
@@ -36,6 +41,39 @@ Item {
 
         // Tell Qt "I handled this keypress, do not pass it to any other buttons"
         event.accepted = true;
+    }
+
+    Keys.onUpPressed: event => {
+        root.currentVolume = Math.min(100, root.currentVolume + 5);
+        videoPlayer.setProperty("volume", root.currentVolume);
+        if (root.isMuted) {
+            root.isMuted = false;
+            videoPlayer.setProperty("mute", "no");
+        }
+        showControls();
+        event.accepted = true;
+    }
+
+    Keys.onDownPressed: event => {
+        root.currentVolume = Math.max(0, root.currentVolume - 5);
+        videoPlayer.setProperty("volume", root.currentVolume);
+        showControls();
+        event.accepted = true;
+    }
+
+    Keys.onPressed: event => {
+        if (event.key === Qt.Key_M) {
+            root.isMuted = !root.isMuted;
+            videoPlayer.setProperty("mute", root.isMuted ? "yes" : "no");
+            showControls();
+            event.accepted = true;
+        }
+    }
+
+    function showControls() {
+        controlBar.opacity = 1.0;
+        cursorVisible = true;
+        hideTimer.restart();
     }
 
     // Public functions to control the player from the outside
@@ -222,6 +260,32 @@ Item {
                 text: formatTime(videoPlayer.totalDuration)
                 color: Theme.textTitle
                 font.pixelSize: 16
+            }
+
+            Button {
+                icon.name: root.isMuted || root.currentVolume === 0 ? "volume-mute" : "volume-up"
+                icon.source: root.isMuted || root.currentVolume === 0 ? "volume-mute.svg" : "volume-up.svg"
+                onClicked: {
+                    root.isMuted = !root.isMuted;
+                    videoPlayer.setProperty("mute", root.isMuted ? "yes" : "no");
+                }
+            }
+
+            Slider {
+                id: volumeSlider
+                Layout.preferredWidth: 100 // Smaller than the seek slider
+                from: 0
+                to: 100
+                value: root.currentVolume
+                onMoved: {
+                    root.currentVolume = value;
+                    // Auto-unmute if the user drags the slider up while muted
+                    if (root.isMuted && value > 0) {
+                        root.isMuted = false;
+                        videoPlayer.setProperty("mute", "no");
+                    }
+                    videoPlayer.setProperty("volume", root.currentVolume);
+                }
             }
 
             Button {

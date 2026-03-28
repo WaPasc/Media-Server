@@ -40,6 +40,8 @@ qt_add_qml_module(appMediaServerClient
         fullscreen.svg
         check-circle.svg
         settings.svg
+        volume-up.svg
+        volume-mute.svg
 
 
 )
