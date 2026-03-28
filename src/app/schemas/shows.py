@@ -11,6 +11,7 @@ class ShowResponse(BaseModel):
     overview: str | None = None
     poster_url: str | None = None
     backdrop_url: str | None = None
+    is_available: bool | None = True
 
     @classmethod
     def from_model(cls, s: TVShow, tmdb_client: TMDBClient):
@@ -25,6 +26,7 @@ class ShowResponse(BaseModel):
             backdrop_url=tmdb_client.get_backdrop_url(s.backdrop_path)
             if s.backdrop_path
             else None,
+            is_available=s.is_available,
         )
 
 
@@ -35,6 +37,7 @@ class EpisodeResponse(BaseModel):
     file_id: int | None = None
     still_url: str | None = None
     is_completed: bool | None = False
+    is_available: bool | None = True
 
 
 class SeasonResponse(BaseModel):
@@ -54,26 +57,36 @@ class ShowDetailResponse(ShowResponse):
             for ep in season.episodes:
                 # extract completion status
                 completed = False
-                if ep.files and ep.files[0].progress:
-                    completed = next(
-                        (
-                            p.is_completed
-                            for p in ep.files[0].progress
-                            if p.user_id == 1
-                        ),
-                        False,
+                file_id = None
+                if ep.files:
+                    # Pick a valid file for the video player
+                    preferred_file = next(
+                        (f for f in ep.files if f.is_available), ep.files[0]
                     )
+                    if preferred_file.is_available:
+                        file_id = preferred_file.id
+
+                    if preferred_file.progress:
+                        completed = next(
+                            (
+                                p.is_completed
+                                for p in preferred_file.progress
+                                if p.user_id == 1
+                            ),
+                            False,
+                        )
 
                 episodes_data.append(
                     EpisodeResponse(
                         episode_number=ep.episode_number,
                         title=ep.title,
                         overview=ep.overview,
-                        file_id=ep.files[0].id if ep.files else None,
+                        file_id=file_id,
                         still_url=tmdb_client.get_still_url(ep.still_path)
                         if ep.still_path
                         else None,
                         is_completed=completed,
+                        is_available=ep.is_available,
                     )
                 )
 
@@ -95,4 +108,5 @@ class ShowDetailResponse(ShowResponse):
             if s.backdrop_path
             else None,
             seasons=seasons_data,
+            is_available=s.is_available,
         )

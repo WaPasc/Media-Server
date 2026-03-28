@@ -38,6 +38,8 @@ class MediaFile(Base):
     movie_id: Mapped[Optional[int]] = mapped_column(ForeignKey('movies.id'))
     episode_id: Mapped[Optional[int]] = mapped_column(ForeignKey('episodes.id'))
 
+    is_available: Mapped[bool] = mapped_column(default=True, nullable=False)
+
     movie: Mapped[Optional['Movie']] = relationship(back_populates='files')
     episode: Mapped[Optional['Episode']] = relationship(back_populates='files')
     progress: Mapped[List['WatchProgress']] = relationship(
@@ -55,6 +57,8 @@ class Movie(Base):
     overview: Mapped[Optional[str]] = mapped_column(Text)
     poster_path: Mapped[Optional[str]] = mapped_column(String(255))  # Vertical
     backdrop_path: Mapped[Optional[str]] = mapped_column(String(255))  # Horizontal
+
+    is_available: Mapped[bool] = mapped_column(default=True, nullable=False)
 
     # A single movie might have multiple files (e.g., 1080p and 4K versions)
     files: Mapped[List['MediaFile']] = relationship(
@@ -79,6 +83,8 @@ class Episode(Base):
     still_path: Mapped[Optional[str]] = mapped_column(String(255))
 
     season: Mapped['Season'] = relationship(back_populates='episodes')
+
+    is_available: Mapped[bool] = mapped_column(default=True, nullable=False)
 
     # Links to the actual physical file
     files: Mapped[List['MediaFile']] = relationship(
@@ -119,6 +125,8 @@ class TVShow(Base):
     overview: Mapped[Optional[str]] = mapped_column(Text)
     poster_path: Mapped[Optional[str]] = mapped_column(String(255))
     backdrop_path: Mapped[Optional[str]] = mapped_column(String(255))
+
+    is_available: Mapped[bool] = mapped_column(default=True, nullable=False)
 
     # A show has many seasons
     seasons: Mapped[List['Season']] = relationship(
