@@ -47,6 +47,7 @@ qt_add_qml_module(appMediaServerClient
         play.svg
         pause.svg
         back.svg
+        missing.svg
 
 
 )

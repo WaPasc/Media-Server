@@ -66,9 +66,9 @@ Item {
     }
 
     Component.onCompleted: {
-            fetchMedia();
-            fetchContinueWatching();
-        }
+        fetchMedia();
+        fetchContinueWatching();
+    }
 
     onVisibleChanged: {
         if (visible) {
@@ -99,10 +99,6 @@ Item {
         for (let i = 0; i < rawMediaData.length; i++) {
             let item = rawMediaData[i];
 
-            // Skip movies without files
-            if (currentMode === "movies" && item.file_id === null)
-                continue;
-
             // Apply search query
             if (query === "" || item.title.toLowerCase().includes(query)) {
                 mediaModel.append({
@@ -111,7 +107,8 @@ Item {
                     "posterUrl": item.poster_url || "",
                     "fileId": item.file_id || 0,
                     "year": item.year ? item.year.toString() : "Unknown Year",
-                    "isCompleted": item.is_completed || false
+                    "isCompleted": item.is_completed || false,
+                    "isAvailable": item.is_available !== undefined ? item.is_available : true // Add the new flag
                 });
             }
         }
@@ -491,6 +488,31 @@ Item {
                         visible: model.posterUrl === ""
                     }
 
+                    // NOT AVAILABLE POSTER OVERLAY
+                    Rectangle {
+                        anchors.fill: parent
+                        color: "black"
+                        radius: 12
+                        opacity: 0.65
+                        visible: !model.isAvailable
+                    }
+
+                    // MISSING FILE OVERLAY
+                    Button {
+                        anchors.centerIn: parent
+                        icon.source: "missing.svg"
+                        icon.color: "red"
+                        width: 48
+                        height: 48
+                        icon.width: 48
+                        icon.height: 48
+                        opacity: 0.8
+                        visible: !model.isAvailable
+                        enabled: false
+
+                        background: Item {}
+                    }
+
                     // The border (Rendered last so it sits on top of everything)
                     Rectangle {
                         anchors.fill: parent
@@ -551,10 +573,17 @@ Item {
                 id: mouseArea
                 anchors.fill: parent
                 hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
+                // Change cursor to 'Forbidden' if it's missing, otherwise use 'PointingHand'
+                cursorShape: model.isAvailable ? Qt.PointingHandCursor : Qt.ForbiddenCursor
+
                 onClicked: {
+                    // Block navigation if the file or show is missing
+                    if (!model.isAvailable) {
+                        console.log("Media missing! Cannot open.");
+                        return;
+                    }
+
                     if (currentMode === "movies") {
-                        // Pass the mediaId instead of constructing the stream URL
                         root.movieSelected(model.mediaId);
                     } else {
                         root.showSelected(model.mediaId);
