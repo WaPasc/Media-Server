@@ -10,7 +10,6 @@
 - [ ] Metadata Refresh: Add a button in the UI to force an update from TMDB in case a poster changes or new cast info is added.
 
 ## Library & Media Management
-- [ ] Soft Delete: Update the database models so that deleting a file flips an `is_available = False` flag instead of erasing the row entirely (ensures watch history and ratings are preserved).
 - [ ] Add Manual Path: Add a button in the desktop app to add a manual file path to the library.
 - [ ] Media Engine Upgrade: Remove basic scripting and replace with a more robust solution for handling media files, such as a dedicated media management library or service.
 
