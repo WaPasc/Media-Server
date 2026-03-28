@@ -66,8 +66,15 @@ Item {
     }
 
     Component.onCompleted: {
-        fetchMedia();
-        fetchContinueWatching();
+            fetchMedia();
+            fetchContinueWatching();
+        }
+
+    onVisibleChanged: {
+        if (visible) {
+            fetchMedia();
+            fetchContinueWatching();
+        }
     }
 
     function fetchMedia() {

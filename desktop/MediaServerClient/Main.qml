@@ -11,6 +11,7 @@ Window {
     color: "black"
 
     property string currentScreen: "library"
+    property string playerReturnScreen: "library"
 
     function toggleFullscreen() {
         if (mainWindow.visibility === Window.FullScreen) {
@@ -33,27 +34,27 @@ Window {
     }
 
     Button {
-            id: settingsButton
-            anchors.top: parent.top
-            anchors.right: parent.right
-            anchors.margins: 20
-            width: 40
-            height: 40
-            visible: currentScreen === "library" // Only show on the main library page
-            z: 100 // Ensure it sits on top
+        id: settingsButton
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.margins: 20
+        width: 40
+        height: 40
+        visible: currentScreen === "library" // Only show on the main library page
+        z: 100 // Ensure it sits on top
 
-            background: Rectangle {
-                color: settingsButton.hovered ? "#333333" : "transparent"
-                radius: 20
-            }
-
-            icon.source: "settings.svg"
-            icon.color: "#EAEAEA" // Make the SVG match our text color
-            icon.width: 24
-            icon.height: 24
-
-            onClicked: currentScreen = "settings"
+        background: Rectangle {
+            color: settingsButton.hovered ? "#333333" : "transparent"
+            radius: 20
         }
+
+        icon.source: "settings.svg"
+        icon.color: "#EAEAEA" // Make the SVG match our text color
+        icon.width: 24
+        icon.height: 24
+
+        onClicked: currentScreen = "settings"
+    }
 
     LibraryScreen {
         id: library
@@ -72,6 +73,7 @@ Window {
         }
 
         onResumeMedia: (streamUrl, fileId) => {
+            playerReturnScreen = "library";
             player.playVideo(streamUrl, fileId);
             currentScreen = "player";
         }
@@ -85,6 +87,7 @@ Window {
         onBackClicked: currentScreen = "library"
 
         onMoviePlay: (streamUrl, fileId) => {
+            playerReturnScreen = "movieDetail";
             player.playVideo(streamUrl, fileId);
             currentScreen = "player";
         }
@@ -100,6 +103,7 @@ Window {
         }
 
         onEpisodePlay: (streamUrl, fileId) => {
+            playerReturnScreen = "showDetail";
             player.playVideo(streamUrl, fileId);
             currentScreen = "player";
         }
@@ -111,12 +115,7 @@ Window {
         visible: currentScreen === "player"
 
         onBackClicked: {
-            // if we were watching a show, go back to the episode list
-            if (showDetail.showId !== -1 && showDetail.visible === false) {
-                currentScreen = "showDetail";
-            } else {
-                currentScreen = "library";
-            }
+            currentScreen = playerReturnScreen;
 
             if (mainWindow.visibility === Window.FullScreen) {
                 mainWindow.visibility = preFullscreenState;
@@ -133,7 +132,7 @@ Window {
         visible: currentScreen === "settings"
 
         onBackClicked: {
-            currentScreen = "library"
+            currentScreen = "library";
         }
     }
 }

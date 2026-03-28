@@ -22,6 +22,12 @@ Item {
             loadMovieDetails();
     }
 
+    onVisibleChanged: {
+            if (visible && movieId !== -1) {
+                loadMovieDetails();
+            }
+        }
+
     function loadMovieDetails() {
         var xhr = new XMLHttpRequest();
         xhr.open("GET", "http://127.0.0.1:8000/api/movie/" + movieId);

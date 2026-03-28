@@ -15,6 +15,7 @@ Item {
     property string backdropUrl: ""
     property string overview: ""
     property var rawShowData: null
+    property int savedSeasonIndex: 0
 
     ListModel {
         id: seasonModel
@@ -24,8 +25,15 @@ Item {
     }
 
     onShowIdChanged: {
-        if (showId !== -1)
+        if (showId !== -1) {
+            savedSeasonIndex = 0; // Reset season memory for new show
             loadShowDetails();
+        }
+    }
+    onVisibleChanged: {
+        if (visible && showId !== -1) {
+            loadShowDetails();
+        }
     }
 
     function loadShowDetails() {
@@ -50,8 +58,14 @@ Item {
                 }
 
                 if (seasons.length > 0) {
-                    seasonComboBox.currentIndex = 0;
-                    loadEpisodesForSeason(0);
+                    // Make sure the saved index isn't out of bounds
+                    if (savedSeasonIndex >= seasons.length) {
+                        savedSeasonIndex = 0;
+                    }
+
+                    // Restore the combo box to the remembered season
+                    seasonComboBox.currentIndex = savedSeasonIndex;
+                    loadEpisodesForSeason(savedSeasonIndex);
                 }
             }
         };
@@ -246,6 +260,7 @@ Item {
                         }
                         onCurrentIndexChanged: {
                             if (currentIndex >= 0 && seasonModel.count > 0) {
+                                savedSeasonIndex = currentIndex;
                                 loadEpisodesForSeason(seasonModel.get(currentIndex).seasonIndex);
                             }
                         }
