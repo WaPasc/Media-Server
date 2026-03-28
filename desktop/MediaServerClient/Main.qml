@@ -114,6 +114,8 @@ Window {
         anchors.fill: parent
         visible: currentScreen === "player"
 
+        isFullscreen: mainWindow.visibility === Window.FullScreen
+
         onBackClicked: {
             currentScreen = playerReturnScreen;
 
@@ -122,8 +124,13 @@ Window {
             }
         }
         onFullscreenRequested: {
-            toggleFullscreen();
-        }
+                    // Toggle the actual window state
+                    if (mainWindow.visibility === Window.FullScreen) {
+                        mainWindow.visibility = Window.Windowed;
+                    } else {
+                        mainWindow.visibility = Window.FullScreen;
+                    }
+                }
     }
 
     SettingsScreen {

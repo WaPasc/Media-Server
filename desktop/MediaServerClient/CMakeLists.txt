@@ -37,11 +37,16 @@ qt_add_qml_module(appMediaServerClient
         MpvItem.cpp
 
     RESOURCES
-        fullscreen.svg
         check-circle.svg
         settings.svg
         volume-up.svg
         volume-mute.svg
+        subtitles.svg
+        fullscreen-max.svg
+        fullscreen-min.svg
+        play.svg
+        pause.svg
+        back.svg
 
 
 )

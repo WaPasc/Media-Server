@@ -17,6 +17,8 @@ Item {
     property double currentVolume: 100.0
     property bool isMuted: false
 
+    property bool isFullscreen: false
+
     // Force the player to steal keyboard focus whenever it opens
     onVisibleChanged: {
         if (visible) {
@@ -228,7 +230,28 @@ Item {
             spacing: 15
 
             Button {
-                text: "← Back"
+                id: backBtn
+                Layout.preferredWidth: 44
+                Layout.preferredHeight: 44
+                hoverEnabled: true
+
+                icon.source: "back.svg"
+                icon.width: 22
+                icon.height: 22
+
+                // Matches the hover color transition of all other buttons
+                icon.color: backBtn.hovered ? Theme.iconColor : Theme.iconHoverColor
+
+                background: Rectangle {
+                    color: "transparent"
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    acceptedButtons: Qt.NoButton
+                }
+
                 onClicked: {
                     root.stopVideo();
                     root.backClicked(); // Tell Main.qml we want to go back!
@@ -236,7 +259,29 @@ Item {
             }
 
             Button {
-                text: videoPlayer.isPaused ? "Play" : "Pause"
+                id: playPauseBtn
+                Layout.preferredWidth: 44
+                Layout.preferredHeight: 44
+                hoverEnabled: true
+
+                // Dynamically swap the icon based on the player state
+                icon.source: videoPlayer.isPaused ? "play.svg" : "pause.svg"
+
+                icon.width: 22
+                icon.height: 22
+
+                icon.color: playPauseBtn.hovered ? Theme.iconColor : Theme.iconHoverColor
+
+                background: Rectangle {
+                    color: "transparent"
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    acceptedButtons: Qt.NoButton
+                }
+
                 onClicked: {
                     videoPlayer.isPaused = !videoPlayer.isPaused;
                     videoPlayer.setProperty("pause", videoPlayer.isPaused ? "yes" : "no");
@@ -252,10 +297,43 @@ Item {
             Slider {
                 id: seekSlider
                 Layout.fillWidth: true
+                Layout.alignment: Qt.AlignVCenter
                 from: 0
+                hoverEnabled: true
+
+                // 1. CUSTOMIZE THE TRACK (Background)
+                background: Rectangle {
+                    x: seekSlider.leftPadding
+                    y: seekSlider.topPadding + seekSlider.availableHeight / 2 - height / 2
+                    implicitWidth: 200 // This is a baseline, Layout.fillWidth overrides it anyway
+                    implicitHeight: 4 // Thickness of the track
+                    color: Theme.progressToComplete
+                    width: seekSlider.availableWidth
+                    height: implicitHeight
+                    radius: 2
+
+                    // The filled portion of the track showing playback progress
+                    Rectangle {
+                        width: seekSlider.visualPosition * parent.width
+                        height: parent.height
+                        color: Theme.iconColor
+                        radius: 2
+                    }
+                }
+
+                // 2. CUSTOMIZE THE KNOB (Handle)
+                handle: Rectangle {
+                    x: seekSlider.leftPadding + seekSlider.visualPosition * (seekSlider.availableWidth - width)
+                    y: seekSlider.topPadding + seekSlider.availableHeight / 2 - height / 2
+                    visible: seekSlider.pressed || seekSlider.hovered
+                    implicitWidth: 12
+                    implicitHeight: 12
+                    radius: 6 // Makes it a perfect circle
+                    color: Theme.iconColor
+                }
+
                 onMoved: videoPlayer.command(["seek", seekSlider.value, "absolute"])
             }
-
             Text {
                 text: formatTime(videoPlayer.totalDuration)
                 color: Theme.textTitle
@@ -263,8 +341,29 @@ Item {
             }
 
             Button {
-                icon.name: root.isMuted || root.currentVolume === 0 ? "volume-mute" : "volume-up"
+                id: volBtn
+                Layout.preferredWidth: 44
+                Layout.preferredHeight: 44
+                hoverEnabled: true
+
+                // Dynamically swap the icon based on mute state or zero volume
                 icon.source: root.isMuted || root.currentVolume === 0 ? "volume-mute.svg" : "volume-up.svg"
+
+                icon.width: 22
+                icon.height: 22
+
+                icon.color: volBtn.hovered ? Theme.iconColor : Theme.iconHoverColor
+
+                background: Rectangle {
+                    color: "transparent"
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    acceptedButtons: Qt.NoButton
+                }
+
                 onClicked: {
                     root.isMuted = !root.isMuted;
                     videoPlayer.setProperty("mute", root.isMuted ? "yes" : "no");
@@ -273,10 +372,47 @@ Item {
 
             Slider {
                 id: volumeSlider
-                Layout.preferredWidth: 100 // Smaller than the seek slider
+                Layout.preferredWidth: 100
+                Layout.alignment: Qt.AlignVCenter // Keeps it perfectly centered with the buttons
                 from: 0
                 to: 100
                 value: root.currentVolume
+
+                hoverEnabled: true
+
+                // CUSTOMIZE THE TRACK (Background)
+                background: Rectangle {
+                    x: volumeSlider.leftPadding
+                    y: volumeSlider.topPadding + volumeSlider.availableHeight / 2 - height / 2
+                    implicitWidth: 100
+                    implicitHeight: 4 // Thickness of the track
+                    width: volumeSlider.availableWidth
+                    height: implicitHeight
+                    radius: 2
+                    color: Theme.progressToComplete
+
+                    // The filled portion of the track
+                    Rectangle {
+                        width: volumeSlider.visualPosition * parent.width
+                        height: parent.height
+                        color: volumeSlider.hovered || volumeSlider.pressed ? Theme.iconColor : Theme.iconHoverColor
+                        radius: 2
+                    }
+                }
+
+                // CUSTOMIZE THE KNOB (Handle)
+                handle: Rectangle {
+                    x: volumeSlider.leftPadding + volumeSlider.visualPosition * (volumeSlider.availableWidth - width)
+                    y: volumeSlider.topPadding + volumeSlider.availableHeight / 2 - height / 2
+                    implicitWidth: 12
+                    implicitHeight: 12
+                    radius: 6 // Makes it a perfect circle
+                    color: volumeSlider.pressed || volumeSlider.hovered ? Theme.iconColor : Theme.iconHoverColor
+
+                    // Slightly enlarge the knob when interacting with it
+                    scale: volumeSlider.pressed || volumeSlider.hovered ? 1.2 : 1.0
+                }
+
                 onMoved: {
                     root.currentVolume = value;
                     // Auto-unmute if the user drags the slider up while muted
@@ -289,26 +425,59 @@ Item {
             }
 
             Button {
-                text: "CC"
-                font.bold: true
-                palette.buttonText: Theme.textTitle
+                id: subBtn
+                Layout.preferredWidth: 44
+                Layout.preferredHeight: 44
+                hoverEnabled: true // Tell the button to track hovers
+
+                icon.source: "subtitles.svg"
+                icon.width: 28
+                icon.height: 28
+
+                // Flipped the colors so hoverColor triggers on hover
+                icon.color: subBtn.hovered ? Theme.iconColor : Theme.iconHoverColor
+
                 background: Rectangle {
                     color: "transparent"
-                    border.color: parent.hovered ? Theme.accent : "transparent"
-                    radius: 6
                 }
-                onClicked: {
-                    // This tells mpv to switch to the next subtitle track, or turn them off
-                    videoPlayer.command(["cycle", "sub"]);
 
-                    // Optional: Show a quick on-screen message so the user knows it changed
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    acceptedButtons: Qt.NoButton
+                }
+
+                onClicked: {
+                    videoPlayer.command(["cycle", "sub"]);
                     videoPlayer.command(["show-text", "Subtitles cycled"]);
                 }
             }
 
             Button {
-                icon.name: "fullscreen"
-                icon.source: "fullscreen.svg"
+                id: fullBtn
+                Layout.preferredWidth: 44
+                Layout.preferredHeight: 44
+                hoverEnabled: true
+
+                // Will dynamically change the icon if we are in fullscreen
+                icon.source: root.isFullscreen ? "fullscreen-min.svg" : "fullscreen-max.svg"
+
+                icon.width: 22
+                icon.height: 22
+
+                // Changed subBtn.hovered to fullBtn.hovered
+                icon.color: fullBtn.hovered ? Theme.iconColor : Theme.iconHoverColor
+
+                background: Rectangle {
+                    color: "transparent"
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    acceptedButtons: Qt.NoButton
+                }
+
                 onClicked: root.fullscreenRequested()
             }
         }
