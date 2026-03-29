@@ -16,6 +16,7 @@ Item {
     property string overview: ""
     property var rawShowData: null
     property int savedSeasonIndex: 0
+    property var nextEpisode: null
 
     ListModel {
         id: seasonModel
@@ -46,6 +47,8 @@ Item {
                 showTitle = rawShowData.title;
                 backdropUrl = rawShowData.backdrop_url || "";
                 overview = rawShowData.overview || "No overview available for this show.";
+
+                calculateNextEpisode();
 
                 seasonModel.clear();
                 let seasons = rawShowData.seasons.sort((a, b) => a.season_number - b.season_number);
@@ -92,6 +95,39 @@ Item {
                 "isAvailable": ep.is_available !== undefined ? ep.is_available : true
             });
         }
+    }
+
+    function calculateNextEpisode() {
+        if (!rawShowData || !rawShowData.seasons)
+            return;
+
+        let seasons = rawShowData.seasons.sort((a, b) => a.season_number - b.season_number);
+
+        for (let s = 0; s < seasons.length; s++) {
+            let season = seasons[s];
+            let eps = season.episodes.sort((a, b) => a.episode_number - b.episode_number);
+
+            for (let e = 0; e < eps.length; e++) {
+                let ep = eps[e];
+
+                // Parse availability
+                let epAvailable = ep.is_available !== undefined ? ep.is_available : true;
+
+                // Skip if completed, missing, or has no file attached
+                if (!ep.is_completed && epAvailable && ep.file_id !== null && ep.file_id !== -1) {
+                    nextEpisode = {
+                        seasonNum: season.season_number,
+                        seasonIndex: s,
+                        episodeNum: ep.episode_number,
+                        title: ep.title,
+                        fileId: ep.file_id
+                    };
+                    return;
+                }
+            }
+        }
+        // If it finishes the loop without returning, the show is fully watched (or no episodes exist)
+        nextEpisode = null;
     }
 
     // STATIC BACKGROUND
@@ -221,6 +257,67 @@ Item {
                 width: 1
                 height: 40
             } // Margin (mb-10)
+
+            // THE CONTINUE WATCHING BUTTON
+            Rectangle {
+                width: nextEpisodeText.width + 64 // Auto-sizes width to fit the text
+                height: 48
+                radius: 24
+                color: playMouseArea.containsMouse ? "#90909090" : "#66808080"
+
+                // Hides completely if finished the show or no files are available
+                visible: root.nextEpisode !== null
+
+                Behavior on color {
+                    ColorAnimation {
+                        duration: 150
+                    }
+                }
+
+                Row {
+                    anchors.centerIn: parent
+                    spacing: 12
+
+                    Text {
+                        text: "▶"
+                        color: "white"
+                        font.pixelSize: 18
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    Text {
+                        id: nextEpisodeText
+                        text: root.nextEpisode ? ("Play S" + root.nextEpisode.seasonNum + " E" + root.nextEpisode.episodeNum + " • " + root.nextEpisode.title) : ""
+                        color: "white"
+                        font.pixelSize: 16
+                        font.bold: true
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+
+                MouseArea {
+                    id: playMouseArea
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    hoverEnabled: true
+                    onClicked: {
+                        if (root.nextEpisode) {
+                            // Automatically switch the dropdown to the season about to be watched
+                            savedSeasonIndex = root.nextEpisode.seasonIndex;
+                            seasonComboBox.currentIndex = savedSeasonIndex;
+
+                            // Trigger the player
+                            let streamUrl = "http://127.0.0.1:8000/api/stream/" + root.nextEpisode.fileId + "?direct_play=true";
+                            root.episodePlay(streamUrl, root.nextEpisode.fileId);
+                        }
+                    }
+                }
+            }
+
+            Item {
+                width: 1
+                height: 40
+            } // Margin before the Season Selector Bar
 
             // Season Selector Bar
             Rectangle {
