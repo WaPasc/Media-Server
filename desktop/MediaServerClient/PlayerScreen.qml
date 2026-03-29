@@ -7,32 +7,42 @@ Item {
     id: root
     focus: true
 
-    // Signals to talk to Main.qml
     signal backClicked
     signal fullscreenRequested
 
     property bool cursorVisible: true
     property int currentFileId: -1
-
     property double currentVolume: 100.0
     property bool isMuted: false
-
     property bool isFullscreen: false
+    property int seekDirection: 0
 
-    // Force the player to steal keyboard focus whenever it opens
     onVisibleChanged: {
-        if (visible) {
+        if (visible)
             root.forceActiveFocus();
+    }
+
+    function showControls() {
+        controlBar.opacity = 1.0;
+        cursorVisible = true;
+        hideTimer.restart();
+    }
+
+    // Seek timer for hold-to-fast-seek
+    Timer {
+        id: fastSeekTimer
+        interval: 300
+        repeat: true
+        onTriggered: {
+            videoPlayer.command(["seek", (root.seekDirection === 1) ? "15" : "-15", "relative+exact"]);
+            showControls();
         }
     }
 
-    // KEYBOARD SHORTCUTS
-
-    // Add 'event' to the parameter list so we can accept the keystroke
+    // Keyboard shortcuts
     Keys.onSpacePressed: event => {
         videoPlayer.isPaused = !videoPlayer.isPaused;
         videoPlayer.setProperty("pause", videoPlayer.isPaused ? "yes" : "no");
-
         if (videoPlayer.isPaused) {
             controlBar.opacity = 1.0;
             hideTimer.stop();
@@ -40,8 +50,6 @@ Item {
         } else {
             hideTimer.restart();
         }
-
-        // Tell Qt "I handled this keypress, do not pass it to any other buttons"
         event.accepted = true;
     }
 
@@ -64,6 +72,16 @@ Item {
     }
 
     Keys.onPressed: event => {
+        if (event.key === Qt.Key_Right || event.key === Qt.Key_Left) {
+            if (event.isAutoRepeat) {
+                if (!fastSeekTimer.running)
+                    fastSeekTimer.start();
+            } else {
+                root.seekDirection = (event.key === Qt.Key_Right) ? 1 : -1;
+            }
+            event.accepted = true;
+            return;
+        }
         if (event.key === Qt.Key_M) {
             root.isMuted = !root.isMuted;
             videoPlayer.setProperty("mute", root.isMuted ? "yes" : "no");
@@ -72,10 +90,21 @@ Item {
         }
     }
 
-    function showControls() {
-        controlBar.opacity = 1.0;
-        cursorVisible = true;
-        hideTimer.restart();
+    Keys.onReleased: event => {
+        if (event.key !== Qt.Key_Right && event.key !== Qt.Key_Left)
+            return;
+        if (event.isAutoRepeat) {
+            event.accepted = true;
+            return;
+        }
+
+        const wasFastSeeking = fastSeekTimer.running;
+        fastSeekTimer.stop();
+        if (!wasFastSeeking) {
+            videoPlayer.command(["seek", (root.seekDirection === 1) ? "5" : "-5", "relative+exact"]);
+            showControls();
+        }
+        event.accepted = true;
     }
 
     // Public functions to control the player from the outside
@@ -234,6 +263,7 @@ Item {
                 Layout.preferredWidth: 44
                 Layout.preferredHeight: 44
                 hoverEnabled: true
+                focusPolicy: Qt.NoFocus
 
                 icon.source: "back.svg"
                 icon.width: 22
@@ -263,6 +293,7 @@ Item {
                 Layout.preferredWidth: 44
                 Layout.preferredHeight: 44
                 hoverEnabled: true
+                focusPolicy: Qt.NoFocus
 
                 // Dynamically swap the icon based on the player state
                 icon.source: videoPlayer.isPaused ? "play.svg" : "pause.svg"
@@ -300,6 +331,7 @@ Item {
                 Layout.alignment: Qt.AlignVCenter
                 from: 0
                 hoverEnabled: true
+                focusPolicy: Qt.NoFocus
 
                 // 1. CUSTOMIZE THE TRACK (Background)
                 background: Rectangle {
@@ -345,6 +377,7 @@ Item {
                 Layout.preferredWidth: 44
                 Layout.preferredHeight: 44
                 hoverEnabled: true
+                focusPolicy: Qt.NoFocus
 
                 // Dynamically swap the icon based on mute state or zero volume
                 icon.source: root.isMuted || root.currentVolume === 0 ? "volume-mute.svg" : "volume-up.svg"
@@ -377,8 +410,8 @@ Item {
                 from: 0
                 to: 100
                 value: root.currentVolume
-
                 hoverEnabled: true
+                focusPolicy: Qt.NoFocus
 
                 // CUSTOMIZE THE TRACK (Background)
                 background: Rectangle {
@@ -429,6 +462,7 @@ Item {
                 Layout.preferredWidth: 44
                 Layout.preferredHeight: 44
                 hoverEnabled: true // Tell the button to track hovers
+                focusPolicy: Qt.NoFocus
 
                 icon.source: "subtitles.svg"
                 icon.width: 28
@@ -458,6 +492,7 @@ Item {
                 Layout.preferredWidth: 44
                 Layout.preferredHeight: 44
                 hoverEnabled: true
+                focusPolicy: Qt.NoFocus
 
                 // Will dynamically change the icon if we are in fullscreen
                 icon.source: root.isFullscreen ? "fullscreen-min.svg" : "fullscreen-max.svg"
