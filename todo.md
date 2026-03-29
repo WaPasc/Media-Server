@@ -1,11 +1,7 @@
 # Todo List
 
-## Continue Watching
-- [ ] Button to Continue: Add a button that allows users to easily continue watching from where they left off.
-
 ## Frontend & Player Experience
 - [ ] Audio Track Selection: Add a button in the video player to cycle through audio tracks (crucial for anime or dual-audio MKV files).
-- [ ] Auto-Play Next Episode: Implement a countdown at the end of a TV episode that automatically launches the next file.
 - [ ] Pagination / Infinite Scroll: Add lazy-loading to the frontend to handle rendering thousands of movies efficiently without overloading the DOM/QML.
 - [ ] Metadata Refresh: Add a button in the UI to force an update from TMDB in case a poster changes or new cast info is added.
 
