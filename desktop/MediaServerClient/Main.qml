@@ -118,10 +118,6 @@ Window {
 
         onBackClicked: {
             currentScreen = playerReturnScreen;
-
-            if (mainWindow.visibility === Window.FullScreen) {
-                mainWindow.visibility = preFullscreenState;
-            }
         }
         onFullscreenRequested: {
                     // Toggle the actual window state
