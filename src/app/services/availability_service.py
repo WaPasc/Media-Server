@@ -11,6 +11,45 @@ from app.models.media import Episode, MediaFile, Movie
 logger = logging.getLogger(__name__)
 
 
+async def _rollup_movie_availability(db: AsyncSession, movies_to_check: set[int]):
+    """Updates the is_available flag for movies based on their attached files."""
+    if not movies_to_check:
+        return
+
+    movie_stmt = (
+        select(Movie)
+        .where(Movie.id.in_(movies_to_check))
+        .options(selectinload(Movie.files))
+    )
+    movie_res = await db.execute(movie_stmt)
+
+    for movie in movie_res.scalars().all():
+        # A movie is available if any of its files are available
+        movie.is_available = any(mf.is_available for mf in movie.files)
+        db.add(movie)
+
+    logger.info(f'Rolled up availability status for {len(movies_to_check)} movies.')
+
+
+async def _rollup_episode_availability(db: AsyncSession, episodes_to_check: set[int]):
+    """Updates the is_available flag for episodes based on their attached files."""
+    if not episodes_to_check:
+        return
+
+    ep_stmt = (
+        select(Episode)
+        .where(Episode.id.in_(episodes_to_check))
+        .options(selectinload(Episode.files))
+    )
+    ep_res = await db.execute(ep_stmt)
+
+    for ep in ep_res.scalars().all():
+        ep.is_available = any(mf.is_available for mf in ep.files)
+        db.add(ep)
+
+    logger.info(f'Rolled up availability status for {len(episodes_to_check)} episodes.')
+
+
 async def scan_library_availability(db: AsyncSession):
     """
     Checks if physical files still exist.
@@ -52,39 +91,9 @@ async def scan_library_availability(db: AsyncSession):
             if f.episode_id:
                 episodes_to_check.add(f.episode_id)
 
-    # Update the Parent Movies
-    if movies_to_check:
-        # selectinload(Movie.files) so the async session doesn't crash
-        movie_stmt = (
-            select(Movie)
-            .where(Movie.id.in_(movies_to_check))
-            .options(selectinload(Movie.files))
-        )
-        movie_res = await db.execute(movie_stmt)
-
-        for movie in movie_res.scalars().all():
-            # A movie is available if any of its files are available
-            movie.is_available = any(mf.is_available for mf in movie.files)
-            db.add(movie)
-
-        logger.info(f'Rolled up availability status for {len(movies_to_check)} movies.')
-
-    # Update the Parent Episodes
-    if episodes_to_check:
-        ep_stmt = (
-            select(Episode)
-            .where(Episode.id.in_(episodes_to_check))
-            .options(selectinload(Episode.files))
-        )
-        ep_res = await db.execute(ep_stmt)
-
-        for ep in ep_res.scalars().all():
-            ep.is_available = any(mf.is_available for mf in ep.files)
-            db.add(ep)
-
-        logger.info(
-            f'Rolled up availability status for {len(episodes_to_check)} episodes.'
-        )
+    # Update the Parent Movies and Episodes
+    await _rollup_movie_availability(db, movies_to_check)
+    await _rollup_episode_availability(db, episodes_to_check)
 
     # Commit all changes at once
     if files_marked_missing > 0 or files_marked_found > 0:
