@@ -15,7 +15,7 @@ router = APIRouter(prefix='/api', tags=['stream'])
 async def stream_video(
     file_id: int,
     direct_play: bool = False,
-    range: str = Header(None),
+    range_header: str = Header(None, alias='Range'),
     db: AsyncSession = Depends(get_db),
 ):
     """Streams video files. Natively streams MP4/WebM, and live-transcodes MKV."""
