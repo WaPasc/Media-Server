@@ -7,15 +7,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import movies, progress, scanner, shows, stream
 from app.services.tmdb_client import TMDBClient
 
-CHUNK_SIZE = 1024 * 1024 * 2
-
-
-content_types = {
-    '.mp4': 'video/mp4',
-    '.webm': 'video/webm',
-    '.mkv': 'video/x-matroska',
-}
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
