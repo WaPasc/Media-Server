@@ -57,46 +57,28 @@ def _build_show_cache_key(title_key: str, year: int | None) -> tuple[str, int | 
     return (title_key, year)
 
 
-async def process_movie_file(file_path: Path, session, tmdb: TMDBClient):
-    """Processes a single movie file, fetches TMDB data, and saves to DB."""
-    abs_path = str(file_path.absolute())
-
-    # Skip if already in database
-    stmt = select(MediaFile).where(MediaFile.file_path == abs_path)
-    result = await session.execute(stmt)
-    if result.scalars().first():
-        logger.info(f'Skipping (already scanned): {file_path.name}')
-        return
-
-    logger.info(f'Scanning new movie: {file_path.name}')
-
-    # Extract local technical info (run in thread to prevent blocking async loop)
-    local_info = await extract_local_info(Path(abs_path))
-    parsed_title = local_info.get('title')
-
-    if not parsed_title or parsed_title == 'Unknown':
-        logger.warning(f'Could not parse title from filename: {file_path.name}')
-        return
-
-    # Search TMDB
+async def _get_or_create_movie(
+    session: AsyncSession, tmdb: TMDBClient, parsed_title: str, local_year: int | None
+) -> int | None:
+    """Handles finding or creating the Movie record, including TMDB lookups."""
     search_results = await tmdb.search_movie(parsed_title)
 
     if not search_results.get('results'):
         logger.warning(f'No TMDB results found for: {parsed_title}')
-        return
+        return None
 
-    # Take the best match
+    # Take the best match (You could also implement a loose/strict matcher here later!)
     best_match = search_results['results'][0]
     tmdb_id = best_match['id']
 
-    # Check if we already have this Movie's metadata in the DB
+    # Check Database
     stmt = select(Movie).where(Movie.tmdb_id == tmdb_id)
     result = await session.execute(stmt)
     movie = result.scalars().first()
 
-    # If not, create the Movie metadata record
+    # Create if missing
     if not movie:
-        parsed_year = local_info.get('year') or (
+        parsed_year = local_year or (
             best_match.get('release_date', '')[:4]
             if best_match.get('release_date')
             else None
@@ -110,19 +92,49 @@ async def process_movie_file(file_path: Path, session, tmdb: TMDBClient):
             backdrop_path=best_match.get('backdrop_path'),
         )
         session.add(movie)
-        await session.flush()  # Generates the movie.id without fully committing
+        await session.flush()
 
-    # Link the physical MediaFile to the Movie
+    return movie.id
+
+
+async def process_movie_file(file_path: Path, session, tmdb: TMDBClient):
+    """Processes a single movie file, fetches TMDB data, and saves to DB."""
+    abs_path = str(file_path.absolute())
+
+    # Skip if already in database
+    stmt = select(MediaFile).where(MediaFile.file_path == abs_path)
+    result = await session.execute(stmt)
+    if result.scalars().first():
+        logger.info(f'Skipping (already scanned): {file_path.name}')
+        return
+
+    logger.info(f'Scanning new movie: {file_path.name}')
+
+    # Extract local technical info
+    local_info = await extract_local_info(Path(file_path))
+    parsed_title = local_info.get('title')
+    local_year = _coerce_positive_int(local_info.get('year'))
+
+    if not parsed_title or parsed_title == 'Unknown':
+        logger.warning(f'Could not parse title from filename: {file_path.name}')
+        return
+
+    # 1. Get or Create the Parent Movie
+    movie_id = await _get_or_create_movie(session, tmdb, parsed_title, local_year)
+    if not movie_id:
+        return
+
+    # 2. Link the physical MediaFile
     media_file = MediaFile(
         file_path=abs_path,
         duration=local_info.get('duration'),
         codec=local_info.get('codec'),
         resolution=local_info.get('resolution'),
-        movie_id=movie.id,
+        movie_id=movie_id,
     )
     session.add(media_file)
     await session.commit()
-    logger.info(f'Successfully added: {movie.title}')
+    logger.info(f'Successfully added: {parsed_title}')
 
 
 async def scan_movies_directory(movies_dir: str):
