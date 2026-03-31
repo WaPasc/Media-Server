@@ -74,6 +74,7 @@ class WatchProgress(Base):
 
     stopped_at: Mapped[float] = mapped_column(Float, default=0.0)
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False)
+    has_ever_completed: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # 5. Timezone-aware, Brussels time
     created_at: Mapped[datetime] = mapped_column(

@@ -58,12 +58,16 @@ async def upsert_watch_progress(
     if progress:
         progress.stopped_at = data.current_time
         progress.is_completed = is_finished
+
+        if is_finished:
+            progress.has_ever_completed = True
     else:
         progress = WatchProgress(
             user_id=user_id,
             media_file_id=data.file_id,
             stopped_at=data.current_time,
             is_completed=is_finished,
+            has_ever_completed=is_finished,
         )
         db.add(progress)
 
