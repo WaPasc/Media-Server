@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from pathlib import Path
 from typing import Any
@@ -72,7 +71,7 @@ async def process_movie_file(file_path: Path, session, tmdb: TMDBClient):
     logger.info(f'Scanning new movie: {file_path.name}')
 
     # Extract local technical info (run in thread to prevent blocking async loop)
-    local_info = await asyncio.to_thread(extract_local_info, abs_path)
+    local_info = await extract_local_info(Path(abs_path))
     parsed_title = local_info.get('title')
 
     if not parsed_title or parsed_title == 'Unknown':
@@ -355,7 +354,7 @@ async def process_tv_file(
         return
 
     # Extract metadata
-    local_info = await asyncio.to_thread(extract_local_info, abs_path)
+    local_info = await extract_local_info(Path(abs_path))
     show_title = local_info.get('title')
     season_number = _coerce_non_negative_int(local_info.get('season'))
     episode_number = _coerce_positive_int(local_info.get('episode'))
