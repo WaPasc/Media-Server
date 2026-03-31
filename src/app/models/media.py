@@ -35,8 +35,13 @@ class MediaFile(Base):
     codec: Mapped[Optional[str]] = mapped_column(String(50))
     resolution: Mapped[Optional[str]] = mapped_column(String(50))
 
-    movie_id: Mapped[Optional[int]] = mapped_column(ForeignKey('movies.id'))
-    episode_id: Mapped[Optional[int]] = mapped_column(ForeignKey('episodes.id'))
+    movie_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey('movies.id', ondelete='CASCADE'), index=True
+    )
+
+    episode_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey('episodes.id', ondelete='CASCADE'), index=True
+    )
 
     is_available: Mapped[bool] = mapped_column(default=True, nullable=False)
 
@@ -62,7 +67,9 @@ class Movie(Base):
 
     # A single movie might have multiple files (e.g., 1080p and 4K versions)
     files: Mapped[List['MediaFile']] = relationship(
-        back_populates='movie', cascade='all, delete-orphan'
+        back_populates='movie',
+        cascade='all, delete-orphan',
+        passive_deletes=True,
     )
 
 
@@ -70,7 +77,9 @@ class Episode(Base):
     __tablename__ = 'episodes'
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    season_id: Mapped[int] = mapped_column(ForeignKey('seasons.id'))
+    season_id: Mapped[int] = mapped_column(
+        ForeignKey('seasons.id', ondelete='CASCADE'), index=True
+    )
     tmdb_id: Mapped[Optional[int]] = mapped_column(unique=True, index=True)
 
     # We still keep season_number here for easy sorting/querying without needing a join
@@ -88,7 +97,9 @@ class Episode(Base):
 
     # Links to the actual physical file
     files: Mapped[List['MediaFile']] = relationship(
-        back_populates='episode', cascade='all, delete-orphan'
+        back_populates='episode',
+        cascade='all, delete-orphan',
+        passive_deletes=True,
     )
 
 
@@ -96,7 +107,9 @@ class Season(Base):
     __tablename__ = 'seasons'
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    show_id: Mapped[int] = mapped_column(ForeignKey('tv_shows.id'))
+    show_id: Mapped[int] = mapped_column(
+        ForeignKey('tv_shows.id', ondelete='CASCADE'), index=True
+    )
     tmdb_id: Mapped[Optional[int]] = mapped_column(unique=True, index=True)
     season_number: Mapped[int]
     title: Mapped[Optional[str]] = mapped_column(
@@ -111,7 +124,9 @@ class Season(Base):
 
     # A season has many episodes
     episodes: Mapped[List['Episode']] = relationship(
-        back_populates='season', cascade='all, delete-orphan'
+        back_populates='season',
+        cascade='all, delete-orphan',
+        passive_deletes=True,
     )
 
 
@@ -130,7 +145,9 @@ class TVShow(Base):
 
     # A show has many seasons
     seasons: Mapped[List['Season']] = relationship(
-        back_populates='show', cascade='all, delete-orphan'
+        back_populates='show',
+        cascade='all, delete-orphan',
+        passive_deletes=True,
     )
 
 

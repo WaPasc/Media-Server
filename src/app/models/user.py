@@ -23,14 +23,23 @@ class UserShowProgress(Base):
     __table_args__ = (UniqueConstraint('user_id', 'show_id', name='uix_user_show'),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(default=1)  # Hardcoded to 1 for MVP
-    show_id: Mapped[int] = mapped_column(ForeignKey('tv_shows.id'), index=True)
 
+    # Added index=True for fast lookups per user
+    user_id: Mapped[int] = mapped_column(
+        default=1, index=True
+    )  # Hardcoded to 1 for MVP
+
+    # Added ondelete='CASCADE'
+    show_id: Mapped[int] = mapped_column(
+        ForeignKey('tv_shows.id', ondelete='CASCADE'), index=True
+    )
+
+    # Added index=True and ondelete='CASCADE'
     last_watched_season_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey('seasons.id')
+        ForeignKey('seasons.id', ondelete='CASCADE'), index=True
     )
     last_watched_episode_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey('episodes.id')
+        ForeignKey('episodes.id', ondelete='CASCADE'), index=True
     )
 
     # 3. Timezone-aware, Brussels time
@@ -52,8 +61,16 @@ class WatchProgress(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(default=1)  # Hardcoded to 1 for MVP
-    media_file_id: Mapped[int] = mapped_column(ForeignKey('media_files.id'))
+
+    # Added index=True
+    user_id: Mapped[int] = mapped_column(
+        default=1, index=True
+    )  # Hardcoded to 1 for MVP
+
+    # Added index=True and ondelete='CASCADE'
+    media_file_id: Mapped[int] = mapped_column(
+        ForeignKey('media_files.id', ondelete='CASCADE'), index=True
+    )
 
     stopped_at: Mapped[float] = mapped_column(Float, default=0.0)
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False)
