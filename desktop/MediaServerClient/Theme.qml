@@ -6,6 +6,7 @@ QtObject {
     readonly property color bgBase: "#09090B"
     readonly property color bgCard: "#171717"
     readonly property color bgOverlay: "#CC000000"
+    readonly property color bgOverlayLight: "#88000000"
 
     // Accents & Borders
     readonly property color accent: "#6366F1"

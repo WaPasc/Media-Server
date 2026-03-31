@@ -48,6 +48,8 @@ qt_add_qml_module(appMediaServerClient
         pause.svg
         back.svg
         missing.svg
+        history.svg
+        QML_FILES HistoryScreen.qml
 
 
 )

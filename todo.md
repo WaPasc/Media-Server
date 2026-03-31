@@ -7,12 +7,10 @@
 
 ## Library & Media Management
 - [ ] Add Manual Path: Add a button in the desktop app to add a manual file path to the library.
-- [ ] Media Engine Upgrade: Remove basic scripting and replace with a more robust solution for handling media files, such as a dedicated media management library or service.
 
 ## User Management
 - [ ] User Authentication: Implement a secure login system.
 - [ ] User Profiles: Allow users to create and manage their profiles, including preferences and watch history.
-- [ ] User Watch History: Implement a feature to track and display the watch history for each user, allowing them to easily find and rewatch previously viewed content.
 
 ## Desktop Client
 - [ ] Graphics API Update: Ensure the video player is not solely tied to legacy OpenGL and uses the modern Qt 6 rendering methods (RHI). See documentation: https://doc.qt.io/qt-6/opengl-changes-qt6.html

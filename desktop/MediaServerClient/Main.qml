@@ -56,6 +56,30 @@ Window {
         onClicked: currentScreen = "settings"
     }
 
+    Button {
+        id: historyButton
+        anchors.top: parent.top
+        anchors.right: settingsButton.left // Anchor it to the left of the settings button
+        anchors.rightMargin: 10
+        anchors.topMargin: 20
+        width: 40
+        height: 40
+        visible: currentScreen === "library"
+        z: 100
+
+        background: Rectangle {
+            color: historyButton.hovered ? "#333333" : "transparent"
+            radius: 20
+        }
+
+        icon.source: "history.svg"
+        icon.color: "#EAEAEA"
+        icon.width: 24
+        icon.height: 24
+
+        onClicked: currentScreen = "history"
+    }
+
     LibraryScreen {
         id: library
         anchors.fill: parent
@@ -120,13 +144,13 @@ Window {
             currentScreen = playerReturnScreen;
         }
         onFullscreenRequested: {
-                    // Toggle the actual window state
-                    if (mainWindow.visibility === Window.FullScreen) {
-                        mainWindow.visibility = Window.Windowed;
-                    } else {
-                        mainWindow.visibility = Window.FullScreen;
-                    }
-                }
+            // Toggle the actual window state
+            if (mainWindow.visibility === Window.FullScreen) {
+                mainWindow.visibility = Window.Windowed;
+            } else {
+                mainWindow.visibility = Window.FullScreen;
+            }
+        }
     }
 
     SettingsScreen {
@@ -136,6 +160,23 @@ Window {
 
         onBackClicked: {
             currentScreen = "library";
+        }
+    }
+
+    HistoryScreen {
+        id: historyScreen
+        anchors.fill: parent
+        visible: currentScreen === "history"
+
+        onBackClicked: {
+            currentScreen = "library";
+        }
+
+        // Handle playing a video directly from the history page
+        onMediaPlay: (streamUrl, fileId) => {
+            playerReturnScreen = "history";
+            player.playVideo(streamUrl, fileId);
+            currentScreen = "player";
         }
     }
 }
