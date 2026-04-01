@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import MediaServerClient
+import "NetworkManager.js" as API
 
 Item {
     id: root
@@ -112,22 +113,20 @@ Item {
         root.currentFileId = fileId;
 
         // Ask server if we need to seek to where we left
-        var xhr = new XMLHttpRequest();
-        xhr.open("GET", "http://127.0.0.1:8000/api/progress/" + fileId);
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
-                let data = JSON.parse(xhr.responseText);
-                let startTime = data.stopped_at;
+        API.get("/api/progress/" + fileId).then(function (data) {
+            let startTime = data.stopped_at;
 
-                // Tell mpv to load the file, but pass the "start=X" option!
-                if (startTime > 0) {
-                    videoPlayer.command(["loadfile", url, "replace", "start=" + startTime]);
-                } else {
-                    videoPlayer.command(["loadfile", url]);
-                }
+            // Tell mpv to load the file, but pass the "start=X" option
+            if (startTime > 0) {
+                videoPlayer.command(["loadfile", url, "replace", "start=" + startTime]);
+            } else {
+                videoPlayer.command(["loadfile", url]);
             }
-        };
-        xhr.send();
+        }).catch(function (error) {
+            console.error("Failed to fetch progress, playing from start:", error);
+            // Fallback: Just play from the beginning if the network request fails
+            videoPlayer.command(["loadfile", url]);
+        });
     }
 
     function stopVideo() {
@@ -151,17 +150,15 @@ Item {
         if (videoPlayer.totalDuration <= 0)
             return;
 
-        var xhr = new XMLHttpRequest();
-        xhr.open("POST", "http://127.0.0.1:8000/api/progress");
-        xhr.setRequestHeader("Content-Type", "application/json");
-
         var payload = {
             "file_id": root.currentFileId,
             "current_time": videoPlayer.currentTime,
             "total_duration": videoPlayer.totalDuration
         };
 
-        xhr.send(JSON.stringify(payload));
+        API.post("/api/progress", payload).then(function (data) {}).catch(function (error) {
+            console.error("Failed to update progress:", error);
+        });
     }
 
     function formatTime(timeInSeconds) {

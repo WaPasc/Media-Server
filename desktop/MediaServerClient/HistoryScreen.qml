@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
 import MediaServerClient
+import "NetworkManager.js" as API
 
 Item {
     id: root
@@ -24,40 +25,36 @@ Item {
     }
 
     function fetchHistory() {
-        var xhr = new XMLHttpRequest();
-        xhr.open("GET", "http://127.0.0.1:8000/api/history");
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
-                let data = JSON.parse(xhr.responseText);
-                historyModel.clear();
+        API.get("/api/history").then(function (data) {
+            historyModel.clear();
 
-                for (let i = 0; i < data.length; i++) {
-                    let item = data[i];
-                    let isMovie = item.type === "movie";
-                    let parsedTitle = isMovie ? item.movie.title : item.episode.title;
-                    let parsedShowTitle = isMovie ? "" : item.show.title;
+            for (let i = 0; i < data.length; i++) {
+                let item = data[i];
+                let isMovie = item.type === "movie";
+                let parsedTitle = isMovie ? item.movie.title : item.episode.title;
+                let parsedShowTitle = isMovie ? "" : item.show.title;
 
-                    // Prefer Episode Still -> Movie/Show Backdrop -> Poster
-                    let parsedImage = "";
-                    if (isMovie) {
-                        parsedImage = item.movie.backdrop_url || item.movie.poster_url || "";
-                    } else {
-                        parsedImage = item.episode.still_url || item.show.backdrop_url || item.show.poster_url || "";
-                    }
-
-                    historyModel.append({
-                        "type": item.type,
-                        "title": parsedTitle,
-                        "showTitle": parsedShowTitle,
-                        "imageUrl": parsedImage,
-                        "fileId": item.file_id,
-                        // Optional: If you want to show when they watched it
-                        "watchedDate": item.last_watched || "Previously Watched"
-                    });
+                // Prefer Episode Still -> Movie/Show Backdrop -> Poster
+                let parsedImage = "";
+                if (isMovie) {
+                    parsedImage = item.movie.backdrop_url || item.movie.poster_url || "";
+                } else {
+                    parsedImage = item.episode.still_url || item.show.backdrop_url || item.show.poster_url || "";
                 }
+
+                historyModel.append({
+                    "type": item.type,
+                    "title": parsedTitle,
+                    "showTitle": parsedShowTitle,
+                    "imageUrl": parsedImage,
+                    "fileId": item.file_id,
+                    // Optional: If you want to show when they watched it
+                    "watchedDate": item.last_watched || "Previously Watched"
+                });
             }
-        };
-        xhr.send();
+        }).catch(function (error) {
+            console.error("Failed to load history:", error);
+        });
     }
 
     // BACKGROUND

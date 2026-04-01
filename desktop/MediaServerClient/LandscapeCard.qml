@@ -27,12 +27,17 @@ Item {
         spacing: 12
 
         scale: mouseArea.containsMouse ? 1.05 : 1.0
-        Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutQuart } }
+        Behavior on scale {
+            NumberAnimation {
+                duration: 200
+                easing.type: Easing.OutQuart
+            }
+        }
 
         // THUMBNAIL CONTAINER
         Item {
             width: parent.width
-            height: width * (9/16) // Force perfect 16:9 aspect ratio
+            height: width * (9 / 16) // Force perfect 16:9 aspect ratio
 
             Rectangle {
                 anchors.fill: parent
@@ -60,8 +65,14 @@ Item {
                     height: 40
                     visible: root.showProgressBar
                     gradient: Gradient {
-                        GradientStop { position: 0.0; color: "transparent" }
-                        GradientStop { position: 1.0; color: "#CC000000" }
+                        GradientStop {
+                            position: 0.0
+                            color: "transparent"
+                        }
+                        GradientStop {
+                            position: 1.0
+                            color: "#CC000000"
+                        }
                     }
                 }
                 Rectangle {
@@ -107,7 +118,11 @@ Item {
                 radius: 12
                 border.width: 1
                 border.color: mouseArea.containsMouse ? Theme.borderHover : Theme.borderMain
-                Behavior on border.color { ColorAnimation { duration: 150 } }
+                Behavior on border.color {
+                    ColorAnimation {
+                        duration: 150
+                    }
+                }
             }
         }
 
@@ -123,7 +138,11 @@ Item {
                 font.bold: true
                 width: parent.width
                 elide: Text.ElideRight
-                Behavior on color { ColorAnimation { duration: 150 } }
+                Behavior on color {
+                    ColorAnimation {
+                        duration: 150
+                    }
+                }
             }
 
             Text {

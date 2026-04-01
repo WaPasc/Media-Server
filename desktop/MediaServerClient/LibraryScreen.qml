@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
 import MediaServerClient
+import "NetworkManager.js" as API
 
 Item {
     id: root
@@ -24,45 +25,26 @@ Item {
     }
 
     function fetchContinueWatching() {
-        var xhr = new XMLHttpRequest();
-        xhr.open("GET", "http://127.0.0.1:8000/api/continue-watching");
+        API.get("/api/continue-watching").then(function (data) {
+            continueWatchingModel.clear();
 
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
-                let data = JSON.parse(xhr.responseText);
-                continueWatchingModel.clear();
+            for (let i = 0; i < data.length; i++) {
+                let item = data[i];
+                let isMovie = item.type === "movie";
 
-                for (let i = 0; i < data.length; i++) {
-                    let item = data[i];
-
-                    // Safely extract the data based on the type of media
-                    let isMovie = item.type === "movie";
-
-                    let parsedMediaId = isMovie ? item.movie.id : item.show.id;
-                    let parsedTitle = isMovie ? item.movie.title : item.episode.title;
-                    let parsedShowTitle = isMovie ? "" : item.show.title;
-
-                    // Prefer Episode Still -> Movie/Show Backdrop -> Poster
-                    let parsedImage = "";
-                    if (isMovie) {
-                        parsedImage = item.movie.backdrop_url || item.movie.poster_url || "";
-                    } else {
-                        parsedImage = item.episode.still_url || item.show.backdrop_url || item.show.poster_url || "";
-                    }
-
-                    continueWatchingModel.append({
-                        "type": item.type,
-                        "mediaId": parsedMediaId,
-                        "title": parsedTitle,
-                        "showTitle": parsedShowTitle,
-                        "imageUrl": parsedImage,
-                        "progress": item.progress_percentage || 0.0,
-                        "fileId": item.file_id
-                    });
-                }
+                continueWatchingModel.append({
+                    "type": item.type,
+                    "mediaId": isMovie ? item.movie.id : item.show.id,
+                    "title": isMovie ? item.movie.title : item.episode.title,
+                    "showTitle": isMovie ? "" : item.show.title,
+                    "imageUrl": isMovie ? (item.movie.backdrop_url || item.movie.poster_url || "") : (item.episode.still_url || item.show.backdrop_url || item.show.poster_url || ""),
+                    "progress": item.progress_percentage || 0.0,
+                    "fileId": item.file_id
+                });
             }
-        };
-        xhr.send();
+        }).catch(function (error) {
+            console.error("Failed to load continue watching:", error);
+        });
     }
 
     Component.onCompleted: {
@@ -78,17 +60,14 @@ Item {
     }
 
     function fetchMedia() {
-        var xhr = new XMLHttpRequest();
         let endpoint = (currentMode === "movies") ? "/api/movies" : "/api/shows";
-        xhr.open("GET", "http://127.0.0.1:8000" + endpoint);
 
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
-                rawMediaData = JSON.parse(xhr.responseText);
-                applyFilter();
-            }
-        };
-        xhr.send();
+        API.get(endpoint).then(function (data) {
+            rawMediaData = data;
+            applyFilter();
+        }).catch(function (error) {
+            console.error("Failed to load media:", error);
+        });
     }
 
     // SEARCH FILTER LOGIC

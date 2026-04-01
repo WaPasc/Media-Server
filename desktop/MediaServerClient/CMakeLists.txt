@@ -33,6 +33,7 @@ qt_add_qml_module(appMediaServerClient
         HistoryScreen.qml
         MediaCard.qml
         LandscapeCard.qml
+        NetworkManager.js
 
     SOURCES
         MpvItem.h

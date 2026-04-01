@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import "NetworkManager.js" as API
 
 Rectangle {
     id: root
@@ -488,34 +489,34 @@ Rectangle {
 
     // API LOGIC
     function fetchDirectories() {
-        var xhr = new XMLHttpRequest();
-        xhr.open("GET", apiUrl + "/directories");
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
-                var dirs = JSON.parse(xhr.responseText);
-                directoryModel.clear();
-                for (var i = 0; i < dirs.length; i++) {
-                    directoryModel.append(dirs[i]);
+        API.get("/api/scanner/directories").then(function (dirs) {
+            directoryModel.clear();
+            for (var i = 0; i < dirs.length; i++) {
+                let dirItem = dirs[i];
+
+                if (dirItem.last_scanned === null) {
+                    dirItem.last_scanned = "Never";
                 }
+                if (dirItem.error_message === null) {
+                    dirItem.error_message = "";
+                }
+
+                directoryModel.append(dirItem);
             }
-        };
-        xhr.send();
+        }).catch(function (error) {
+            console.error("Failed to load directories:", error);
+        });
     }
 
     function deleteDirectory(id) {
-        var xhr = new XMLHttpRequest();
-        xhr.open("DELETE", apiUrl + "/directories/" + id);
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState === XMLHttpRequest.DONE) {
-                if (xhr.status === 204 || xhr.status === 200) {
-                    fetchDirectories();
-                } else {
-                    statusLabel.text = "Failed to remove directory.";
-                    statusLabel.color = "#EF4444";
-                }
-            }
-        };
-        xhr.send();
+        API.del("/api/scanner/directories/" + id).then(function () {
+            // Success! Re-fetch the list to update the UI
+            fetchDirectories();
+        }).catch(function (error) {
+            console.error("Failed to remove directory:", error);
+            statusLabel.text = "Failed to remove directory.";
+            statusLabel.color = "#EF4444";
+        });
     }
 
     function addDirectory(path, type) {
@@ -525,51 +526,39 @@ Rectangle {
             return;
         }
 
-        var xhr = new XMLHttpRequest();
-        xhr.open("POST", apiUrl + "/directories");
-        xhr.setRequestHeader("Content-Type", "application/json");
-
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState === XMLHttpRequest.DONE) {
-                if (xhr.status === 200) {
-                    statusLabel.text = "Directory added successfully!";
-                    statusLabel.color = "#10B981";
-                    pathInput.text = "";
-                    fetchDirectories();
-                } else {
-                    statusLabel.text = "Error: " + xhr.responseText;
-                    statusLabel.color = "#EF4444";
-                }
-            }
-        };
-
+        // Show loading state
         statusLabel.text = "Adding directory...";
         statusLabel.color = Theme.textMuted;
-        xhr.send(JSON.stringify({
+
+        var payload = {
             "path": path,
             "media_type": type
-        }));
+        };
+
+        API.post("/api/scanner/directories", payload).then(function (data) {
+            statusLabel.text = "Directory added successfully!";
+            statusLabel.color = "#10B981";
+            pathInput.text = ""; // Clear the text field
+            fetchDirectories();  // Refresh the UI list
+        }).catch(function (error) {
+            console.error("Failed to add directory:", error);
+            statusLabel.text = "Failed to add directory.";
+            statusLabel.color = "#EF4444";
+        });
     }
 
     function triggerScan() {
-        var xhr = new XMLHttpRequest();
-        xhr.open("POST", apiUrl + "/scan");
-        xhr.setRequestHeader("Content-Type", "application/json");
-
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState === XMLHttpRequest.DONE) {
-                if (xhr.status === 200) {
-                    statusLabel.text = "Scan started! Check backend logs.";
-                    statusLabel.color = "#10B981";
-                } else {
-                    statusLabel.text = "Failed to start scan.";
-                    statusLabel.color = "#EF4444";
-                }
-            }
-        };
-
+        // Show loading state
         statusLabel.text = "Initializing scan...";
         statusLabel.color = Theme.textMuted;
-        xhr.send();
+
+        API.post("/api/scanner/scan").then(function (data) {
+            statusLabel.text = "Scan started! Check backend logs.";
+            statusLabel.color = "#10B981";
+        }).catch(function (error) {
+            console.error("Failed to start scan:", error);
+            statusLabel.text = "Failed to start scan.";
+            statusLabel.color = "#EF4444";
+        });
     }
 }

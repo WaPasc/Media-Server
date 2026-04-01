@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import MediaServerClient
+import "NetworkManager.js" as API
 
 Item {
     id: root
@@ -23,26 +24,21 @@ Item {
     }
 
     onVisibleChanged: {
-            if (visible && movieId !== -1) {
-                loadMovieDetails();
-            }
+        if (visible && movieId !== -1) {
+            loadMovieDetails();
         }
+    }
 
     function loadMovieDetails() {
-        var xhr = new XMLHttpRequest();
-        xhr.open("GET", "http://127.0.0.1:8000/api/movie/" + movieId);
-
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
-                let data = JSON.parse(xhr.responseText);
-                movieTitle = data.title || "";
-                movieYear = data.year ? data.year.toString() : "Unknown Year";
-                backdropUrl = data.backdrop_url || "";
-                overview = data.overview || "No overview available for this title.";
-                fileId = data.file_id || -1;
-            }
-        };
-        xhr.send();
+        API.get("/api/movie/" + movieId).then(function (data) {
+            movieTitle = data.title || "";
+            movieYear = data.year ? data.year.toString() : "Unknown Year";
+            backdropUrl = data.backdrop_url || "";
+            overview = data.overview || "No overview available for this title.";
+            fileId = data.file_id || -1;
+        }).catch(function (error) {
+            console.error("Failed to load movie details:", error);
+        });
     }
 
     // STATIC BACKGROUND

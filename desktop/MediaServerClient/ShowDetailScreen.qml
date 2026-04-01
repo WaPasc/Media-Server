@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Effects
 import MediaServerClient
+import "NetworkManager.js" as API
 
 Item {
     id: root
@@ -38,41 +39,37 @@ Item {
     }
 
     function loadShowDetails() {
-        var xhr = new XMLHttpRequest();
-        xhr.open("GET", "http://127.0.0.1:8000/api/show/" + showId);
+        API.get("/api/show/" + showId).then(function (data) {
+            rawShowData = data;
+            showTitle = rawShowData.title;
+            backdropUrl = rawShowData.backdrop_url || "";
+            overview = rawShowData.overview || "No overview available for this show.";
 
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
-                rawShowData = JSON.parse(xhr.responseText);
-                showTitle = rawShowData.title;
-                backdropUrl = rawShowData.backdrop_url || "";
-                overview = rawShowData.overview || "No overview available for this show.";
+            calculateNextEpisode();
 
-                calculateNextEpisode();
+            seasonModel.clear();
+            let seasons = rawShowData.seasons.sort((a, b) => a.season_number - b.season_number);
 
-                seasonModel.clear();
-                let seasons = rawShowData.seasons.sort((a, b) => a.season_number - b.season_number);
-
-                for (let s = 0; s < seasons.length; s++) {
-                    seasonModel.append({
-                        "seasonText": "Season " + seasons[s].season_number,
-                        "seasonIndex": s
-                    });
-                }
-
-                if (seasons.length > 0) {
-                    // Make sure the saved index isn't out of bounds
-                    if (savedSeasonIndex >= seasons.length) {
-                        savedSeasonIndex = 0;
-                    }
-
-                    // Restore the combo box to the remembered season
-                    seasonComboBox.currentIndex = savedSeasonIndex;
-                    loadEpisodesForSeason(savedSeasonIndex);
-                }
+            for (let s = 0; s < seasons.length; s++) {
+                seasonModel.append({
+                    "seasonText": "Season " + seasons[s].season_number,
+                    "seasonIndex": s
+                });
             }
-        };
-        xhr.send();
+
+            if (seasons.length > 0) {
+                // Make sure the saved index isn't out of bounds
+                if (savedSeasonIndex >= seasons.length) {
+                    savedSeasonIndex = 0;
+                }
+
+                // Restore the combo box to the remembered season
+                seasonComboBox.currentIndex = savedSeasonIndex;
+                loadEpisodesForSeason(savedSeasonIndex);
+            }
+        }).catch(function (error) {
+            console.error("Failed to load show details:", error);
+        });
     }
 
     function loadEpisodesForSeason(index) {
