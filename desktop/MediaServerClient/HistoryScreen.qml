@@ -124,129 +124,34 @@ Item {
 
         model: historyModel
 
-        // Wide 16:9 cards
-        cellWidth: 300
-        cellHeight: 260
+        // The invisible "box" the grid creates for each item
+        cellWidth: 280
+        cellHeight: 210
         clip: true
 
+        // Wrap the card in a basic Item that fills the invisible box
         delegate: Item {
             width: GridView.view.cellWidth
             height: GridView.view.cellHeight
 
-            z: mouseArea.containsMouse ? 10 : 0
-
-            Column {
+            // Center the actual visual card inside the box and give it a fixed size
+            LandscapeCard {
                 anchors.centerIn: parent
-                width: 260
-                spacing: 12
 
-                scale: mouseArea.containsMouse ? 1.05 : 1.0
-                Behavior on scale {
-                    NumberAnimation {
-                        duration: 200
-                        easing.type: Easing.OutQuart
-                    }
-                }
+                // This makes the card physically smaller than the cell, creating spacing
+                width: 270
+                height: 200
 
-                // THUMBNAIL CONTAINER
-                Item {
-                    width: 260
-                    height: 146 // 16:9 aspect ratio
+                fileId: model.fileId
+                imageUrl: model.imageUrl
+                mainTitle: model.type === "episode" ? model.showTitle : model.title
+                subTitle: model.type === "episode" ? model.title : "Movie"
 
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: 12
-                        color: Theme.bgCard
-                    }
+                showProgressBar: false
 
-                    Item {
-                        id: contentToMask
-                        anchors.fill: parent
-                        anchors.margins: 1
-                        visible: false
-                        layer.enabled: true
-
-                        Image {
-                            anchors.fill: parent
-                            source: model.imageUrl
-                            fillMode: Image.PreserveAspectCrop
-                        }
-
-                        // Play button overlay on hover
-                        Rectangle {
-                            anchors.fill: parent
-                            color: Theme.bgOverlayLight
-                            opacity: mouseArea.containsMouse ? 1.0 : 0.0
-                            Behavior on opacity {
-                                NumberAnimation {
-                                    duration: 150
-                                }
-                            }
-                        }
-                    }
-
-                    Item {
-                        id: imageMask
-                        anchors.fill: contentToMask
-                        layer.enabled: true
-                        visible: false
-
-                        Rectangle {
-                            anchors.fill: parent
-                            radius: 11
-                            color: "black"
-                        }
-                    }
-
-                    MultiEffect {
-                        anchors.fill: contentToMask
-                        source: contentToMask
-                        maskEnabled: true
-                        maskSource: imageMask
-                    }
-
-                    Rectangle {
-                        anchors.fill: parent
-                        color: "transparent"
-                        radius: 12
-                        border.width: 1
-                        border.color: mouseArea.containsMouse ? Theme.borderHover : Theme.borderMain
-                    }
-                }
-
-                // TEXT INFO
-                Column {
-                    width: parent.width
-                    spacing: 4
-
-                    Text {
-                        text: model.type === "episode" ? model.showTitle : model.title
-                        color: Theme.textPrimary
-                        font.pixelSize: 16
-                        font.bold: true
-                        width: parent.width
-                        elide: Text.ElideRight
-                    }
-
-                    Text {
-                        text: model.type === "episode" ? model.title : "Movie"
-                        color: Theme.textSecondary
-                        font.pixelSize: 13
-                        width: parent.width
-                        elide: Text.ElideRight
-                    }
-                }
-            }
-
-            MouseArea {
-                id: mouseArea
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-
-                onClicked: {
-                    let streamUrl = "http://127.0.0.1:8000/api/stream/" + model.fileId + "?direct_play=true";
-                    root.mediaPlay(streamUrl, model.fileId);
+                onClicked: id => {
+                    let streamUrl = "http://127.0.0.1:8000/api/stream/" + id + "?direct_play=true";
+                    root.mediaPlay(streamUrl, id);
                 }
             }
         }

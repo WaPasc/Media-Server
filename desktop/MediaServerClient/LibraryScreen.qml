@@ -253,157 +253,24 @@ Item {
                 width: parent.width
                 height: 190 // 140 for image + 50 for text
                 orientation: ListView.Horizontal
-                spacing: 24
+                spacing: 12
                 model: continueWatchingModel
 
                 interactive: true
-
-                delegate: Item {
-                    width: 250 // 16:9 aspect ratio width
+                delegate: LandscapeCard {
+                    width: 250
                     height: 190
+                    fileId: model.fileId
+                    imageUrl: model.imageUrl
+                    mainTitle: model.type === "episode" ? model.showTitle : model.title
+                    subTitle: model.type === "episode" ? model.title : (model.progress + "% Complete")
 
-                    z: cwMouseArea.containsMouse ? 10 : 0
+                    showProgressBar: true
+                    progress: model.progress
 
-                    // The Hover Scale Animation Container
-                    Item {
-                        anchors.fill: parent
-                        scale: cwMouseArea.containsMouse ? 1.05 : 1.0
-                        Behavior on scale {
-                            NumberAnimation {
-                                duration: 200
-                                easing.type: Easing.OutQuart
-                            }
-                        }
-
-                        // The Image Container
-                        Item {
-                            id: cwImageContainer
-                            width: 250
-                            height: 140
-
-                            // Solid Background
-                            Rectangle {
-                                anchors.fill: parent
-                                radius: 12
-                                color: Theme.bgCard
-                            }
-
-                            // The Content to be masked (Image + Overlays)
-                            Item {
-                                id: contentToMask
-                                anchors.fill: parent
-                                anchors.margins: 1 // Keep inside the border
-                                visible: false // Hidden so MultiEffect can render it
-                                layer.enabled: true // Groups all children into one texture
-
-                                Image {
-                                    anchors.fill: parent
-                                    source: model.imageUrl
-                                    fillMode: Image.PreserveAspectCrop
-                                }
-
-                                // The Dark Overlay
-                                Rectangle {
-                                    anchors.bottom: parent.bottom
-                                    width: parent.width
-                                    height: 40
-                                    gradient: Gradient {
-                                        GradientStop {
-                                            position: 0.0
-                                            color: "transparent"
-                                        }
-                                        GradientStop {
-                                            position: 1.0
-                                            color: "#CC000000"
-                                        }
-                                    }
-                                }
-
-                                // The Progress Bar Track
-                                Rectangle {
-                                    anchors.bottom: parent.bottom
-                                    width: parent.width
-                                    height: 4
-                                    color: "transparent"
-                                }
-
-                                // The Progress Bar Fill
-                                Rectangle {
-                                    anchors.bottom: parent.bottom
-                                    anchors.left: parent.left
-                                    width: parent.width * (model.progress / 100)
-                                    height: 4
-                                    color: Theme.accent
-                                }
-                            }
-
-                            // The Mask
-                            Item {
-                                id: cwImageMask
-                                anchors.fill: contentToMask
-                                layer.enabled: true
-                                visible: false
-
-                                Rectangle {
-                                    anchors.fill: parent
-                                    radius: 11 // Inner radius
-                                    color: "black"
-                                }
-                            }
-
-                            // The MultiEffect (Renders everything beautifully rounded)
-                            MultiEffect {
-                                anchors.fill: contentToMask
-                                source: contentToMask
-                                maskEnabled: true
-                                maskSource: cwImageMask
-                            }
-
-                            // The Border (Rendered last so it sits on top)
-                            Rectangle {
-                                anchors.fill: parent
-                                color: "transparent"
-                                radius: 12
-                                border.width: 1
-                                border.color: cwMouseArea.containsMouse ? Theme.borderHover : Theme.borderMain
-                            }
-                        }
-
-                        // The Text Container
-                        Column {
-                            anchors.top: cwImageContainer.bottom
-                            anchors.topMargin: 8
-                            width: parent.width
-                            spacing: 2
-
-                            Text {
-                                text: model.type === "episode" ? model.showTitle : model.title
-                                color: Theme.textPrimary
-                                font.pixelSize: 15
-                                font.bold: true
-                                width: parent.width
-                                elide: Text.ElideRight
-                            }
-                            Text {
-                                text: model.type === "episode" ? model.title : (model.progress + "% Complete")
-                                color: Theme.textSecondary
-                                font.pixelSize: 12
-                                width: parent.width
-                                elide: Text.ElideRight
-                            }
-                        }
-
-                        // The Click Handler
-                        MouseArea {
-                            id: cwMouseArea
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                let streamUrl = "http://127.0.0.1:8000/api/stream/" + model.fileId + "?direct_play=true";
-                                root.resumeMedia(streamUrl, model.fileId);
-                            }
-                        }
+                    onClicked: id => {
+                        let streamUrl = "http://127.0.0.1:8000/api/stream/" + id + "?direct_play=true";
+                        root.resumeMedia(streamUrl, id);
                     }
                 }
             }

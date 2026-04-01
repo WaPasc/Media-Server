@@ -32,6 +32,7 @@ qt_add_qml_module(appMediaServerClient
         Theme.qml
         HistoryScreen.qml
         MediaCard.qml
+        LandscapeCard.qml
 
     SOURCES
         MpvItem.h
