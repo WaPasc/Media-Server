@@ -30,7 +30,8 @@ qt_add_qml_module(appMediaServerClient
         MovieDetailScreen.qml
         SettingsScreen.qml
         Theme.qml
-
+        HistoryScreen.qml
+        MediaCard.qml
 
     SOURCES
         MpvItem.h
@@ -49,9 +50,6 @@ qt_add_qml_module(appMediaServerClient
         back.svg
         missing.svg
         history.svg
-        QML_FILES HistoryScreen.qml
-
-
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.

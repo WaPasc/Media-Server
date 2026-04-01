@@ -414,180 +414,21 @@ Item {
         cellHeight: 380
         clip: true
 
-        delegate: Item {
-            width: GridView.view.cellWidth
-            height: GridView.view.cellHeight
+        // Posters
+        delegate: MediaCard {
+            mediaId: model.mediaId
+            title: model.title
+            year: model.year
+            posterUrl: model.posterUrl
+            isAvailable: model.isAvailable
+            isCompleted: model.isCompleted
+            showCheckmark: currentMode === "movies"
 
-            z: mouseArea.containsMouse ? 10 : 0
-
-            // Inner container that handles the scale animation
-            Column {
-                anchors.centerIn: parent
-                width: 200
-                spacing: 12
-
-                scale: mouseArea.containsMouse ? 1.05 : 1.0
-                Behavior on scale {
-                    NumberAnimation {
-                        duration: 300
-                        easing.type: Easing.OutQuart
-                    }
-                }
-
-                // POSTER CONTAINER
-                Item {
-                    width: 200
-                    height: 300
-
-                    // Solid Background
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: 12
-                        color: Theme.bgCard
-                    }
-
-                    // The raw image (hidden)
-                    Image {
-                        id: posterImage
-                        anchors.fill: parent
-                        anchors.margins: 1
-                        source: model.posterUrl
-                        fillMode: Image.PreserveAspectCrop
-                        visible: false
-                    }
-
-                    // The Mask (hidden)
-                    Item {
-                        id: imageMask
-                        anchors.fill: posterImage // Match the shrunk size
-                        layer.enabled: true
-                        visible: false
-
-                        Rectangle {
-                            anchors.fill: parent
-                            radius: 11 // 12px outer radius minus 1px margin = 11px
-                            color: "black" // Masking color does not need theming
-                        }
-                    }
-
-                    // The MultiEffect (Renders the rounded image)
-                    MultiEffect {
-                        anchors.fill: posterImage // Bind to the shrunk size
-                        source: posterImage
-                        maskEnabled: true
-                        maskSource: imageMask
-                        visible: model.posterUrl !== ""
-                    }
-
-                    // "No Poster" Text
-                    Text {
-                        anchors.centerIn: parent
-                        text: "No Poster"
-                        color: Theme.textMuted
-                        font.pixelSize: 14
-                        visible: model.posterUrl === ""
-                    }
-
-                    // NOT AVAILABLE POSTER OVERLAY
-                    Rectangle {
-                        anchors.fill: parent
-                        color: "black"
-                        radius: 12
-                        opacity: 0.65
-                        visible: !model.isAvailable
-                    }
-
-                    // MISSING FILE OVERLAY
-                    Button {
-                        anchors.centerIn: parent
-                        icon.source: "missing.svg"
-                        icon.color: "red"
-                        width: 48
-                        height: 48
-                        icon.width: 48
-                        icon.height: 48
-                        opacity: 0.8
-                        visible: !model.isAvailable
-                        enabled: false
-
-                        background: Item {}
-                    }
-
-                    // The border (Rendered last so it sits on top of everything)
-                    Rectangle {
-                        anchors.fill: parent
-                        color: "transparent"
-                        radius: 12
-                        border.width: 1
-                        border.color: mouseArea.containsMouse ? Theme.borderHover : Theme.borderMain
-                    }
-
-                    // Watched Indicator
-                    Image {
-                        source: "check-circle.svg"
-                        width: 28
-                        height: 28
-
-                        // THE FIX: Tells the SVG engine to render at this exact resolution
-                        sourceSize.width: 28
-                        sourceSize.height: 28
-
-                        anchors.top: parent.top
-                        anchors.right: parent.right
-                        anchors.margins: 10
-                        visible: model.isCompleted && currentMode === "movies"
-
-                        Behavior on opacity {
-                            NumberAnimation {
-                                duration: 200
-                            }
-                        }
-                        opacity: visible ? 1.0 : 0.0
-                    }
-                }
-
-                // TEXT CONTAINER
-                Column {
-                    width: parent.width
-                    spacing: 2
-
-                    Text {
-                        text: model.title
-                        color: Theme.textPrimary
-                        font.pixelSize: 16
-                        font.bold: true
-                        width: parent.width
-                        elide: Text.ElideRight
-                    }
-
-                    Text {
-                        text: model.year
-                        color: Theme.textSecondary
-                        font.pixelSize: 12
-                        font.bold: true
-                    }
-                }
-            }
-
-            MouseArea {
-                id: mouseArea
-                anchors.fill: parent
-                hoverEnabled: true
-                // Change cursor to 'Forbidden' if it's missing, otherwise use 'PointingHand'
-                cursorShape: model.isAvailable ? Qt.PointingHandCursor : Qt.ForbiddenCursor
-
-                onClicked: {
-                    // Block navigation if the file or show is missing
-                    if (!model.isAvailable) {
-                        console.log("Media missing! Cannot open.");
-                        return;
-                    }
-
-                    if (currentMode === "movies") {
-                        root.movieSelected(model.mediaId);
-                    } else {
-                        root.showSelected(model.mediaId);
-                    }
+            onClicked: id => {
+                if (currentMode === "movies") {
+                    root.movieSelected(id);
+                } else {
+                    root.showSelected(id);
                 }
             }
         }
