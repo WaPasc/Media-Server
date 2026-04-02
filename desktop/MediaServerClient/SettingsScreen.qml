@@ -159,6 +159,14 @@ Rectangle {
                             onClicked: triggerScan()
                         }
                     }
+
+                    Label {
+                        id: scanStatusLabel
+                        text: ""
+                        color: Theme.textMuted
+                        font.pixelSize: 14
+                        Layout.alignment: Qt.AlignHCenter
+                    }
                 }
             }
 
@@ -240,51 +248,20 @@ Rectangle {
             fetchDirectories();
         }).catch(function (error) {
             console.error("Failed to remove directory:", error);
-            statusLabel.text = "Failed to remove directory.";
-            statusLabel.color = "#EF4444";
-        });
-    }
-
-    function addDirectory(path, type) {
-        if (path.trim() === "") {
-            statusLabel.text = "Path cannot be empty!";
-            statusLabel.color = "#EF4444";
-            return;
-        }
-
-        // Show loading state
-        statusLabel.text = "Adding directory...";
-        statusLabel.color = Theme.textMuted;
-
-        var payload = {
-            "path": path,
-            "media_type": type
-        };
-
-        API.post("/api/scanner/directories", payload).then(function (data) {
-            statusLabel.text = "Directory added successfully!";
-            statusLabel.color = "#10B981";
-            pathInput.text = ""; // Clear the text field
-            fetchDirectories();  // Refresh the UI list
-        }).catch(function (error) {
-            console.error("Failed to add directory:", error);
-            statusLabel.text = "Failed to add directory.";
-            statusLabel.color = "#EF4444";
         });
     }
 
     function triggerScan() {
-        // Show loading state
-        statusLabel.text = "Initializing scan...";
-        statusLabel.color = Theme.textMuted;
+        scanStatusLabel.text = "Initializing scan...";
+        scanStatusLabel.color = Theme.textMuted;
 
         API.post("/api/scanner/scan").then(function (data) {
-            statusLabel.text = "Scan started! Check backend logs.";
-            statusLabel.color = "#10B981";
+            scanStatusLabel.text = "Scan started! Check backend logs.";
+            scanStatusLabel.color = "#10B981";
         }).catch(function (error) {
             console.error("Failed to start scan:", error);
-            statusLabel.text = "Failed to start scan.";
-            statusLabel.color = "#EF4444";
+            scanStatusLabel.text = "Failed to start scan.";
+            scanStatusLabel.color = "#EF4444";
         });
     }
 }

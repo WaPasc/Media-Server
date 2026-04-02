@@ -172,7 +172,7 @@ Rectangle {
             MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
-                onClicked: root.submitDirectory()
+                onClicked: root.addDirectory()
             }
         }
 
@@ -186,7 +186,7 @@ Rectangle {
     }
 
     // INTERNAL COMPONENT LOGIC
-    function submitDirectory() {
+    function addDirectory() {
         let path = pathInput.text;
         let type = mediaTypeCombo.currentText;
 
