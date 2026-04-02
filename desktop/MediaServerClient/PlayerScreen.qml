@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Dialogs
 import MediaServerClient
 import "NetworkManager.js" as API
 
@@ -235,6 +236,39 @@ Item {
         }
     }
 
+    // NATIVE FILE PICKER FOR SUBTITLES
+    FileDialog {
+        id: subtitleFileDialog
+        title: "Select Subtitle File"
+
+        // Only allow selecting subtitle formats
+        nameFilters: ["Subtitle files (*.srt *.vtt *.ass *.sub)", "All files (*)"]
+
+        onAccepted: {
+            // Qt returns a URL
+            // Cconvert it to a standard file path for mpv
+            let path = selectedFile.toString();
+
+            // Clean up the "file://" prefix for Windows/Linux compatibility
+            if (path.startsWith("file:///")) {
+                // Windows leaves a slash before the drive letter (e.g., /C:/)
+                if (Qt.platform.os === "windows") {
+                    path = path.substring(8);
+                } else {
+                    path = path.substring(7);
+                }
+            }
+
+            console.log("Loading subtitle:", path);
+
+            // Tell mpv to load the external subtitle track
+            videoPlayer.command(["sub-add", path]);
+        }
+        onRejected: {
+            console.log("Subtitle selection canceled");
+        }
+    }
+
     Rectangle {
         id: controlBar
         anchors.bottom: parent.bottom
@@ -458,29 +492,37 @@ Item {
                 id: subBtn
                 Layout.preferredWidth: 44
                 Layout.preferredHeight: 44
-                hoverEnabled: true // Tell the button to track hovers
+                hoverEnabled: true
                 focusPolicy: Qt.NoFocus
 
                 icon.source: "subtitles.svg"
                 icon.width: 28
                 icon.height: 28
 
-                // Flipped the colors so hoverColor triggers on hover
                 icon.color: subBtn.hovered ? Theme.iconColor : Theme.iconHoverColor
 
                 background: Rectangle {
                     color: "transparent"
                 }
 
+                // Use MouseArea to intercept BOTH Left and Right clicks
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
-                    acceptedButtons: Qt.NoButton
-                }
 
-                onClicked: {
-                    videoPlayer.command(["cycle", "sub"]);
-                    videoPlayer.command(["show-text", "Subtitles cycled"]);
+                    // Tell Qt to listen for both mouse buttons
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+
+                    onClicked: mouse => {
+                        if (mouse.button === Qt.RightButton) {
+                            // RIGHT CLICK: Open the native file picker
+                            subtitleFileDialog.open();
+                        } else {
+                            // LEFT CLICK: Cycle embedded/currently loaded subtitles
+                            videoPlayer.command(["cycle", "sub"]);
+                            videoPlayer.command(["show-text", "Subtitles cycled"]);
+                        }
+                    }
                 }
             }
 
