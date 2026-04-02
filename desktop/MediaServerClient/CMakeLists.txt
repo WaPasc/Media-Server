@@ -34,6 +34,8 @@ qt_add_qml_module(appMediaServerClient
         MediaCard.qml
         LandscapeCard.qml
         NetworkManager.js
+        DirectoryRow.qml
+        AddDirectoryCard.qml
 
     SOURCES
         MpvItem.h
