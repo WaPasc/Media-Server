@@ -249,6 +249,9 @@ Item {
             // Cconvert it to a standard file path for mpv
             let path = selectedFile.toString();
 
+            // Decode URL-encoded characters
+            path = decodeURIComponent(path);
+
             // Clean up the "file://" prefix for Windows/Linux compatibility
             if (path.startsWith("file:///")) {
                 // Windows leaves a slash before the drive letter (e.g., /C:/)
