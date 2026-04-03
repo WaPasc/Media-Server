@@ -162,17 +162,6 @@ Item {
         });
     }
 
-    function formatTime(timeInSeconds) {
-        if (isNaN(timeInSeconds) || timeInSeconds < 0)
-            return "00:00";
-        let h = Math.floor(timeInSeconds / 3600);
-        let m = Math.floor((timeInSeconds % 3600) / 60);
-        let s = Math.floor(timeInSeconds % 60);
-        let mStr = (m < 10 ? "0" : "") + m;
-        let sStr = (s < 10 ? "0" : "") + s;
-        return (h > 0) ? (h + ":" + mStr + ":" + sStr) : (mStr + ":" + sStr);
-    }
-
     MouseArea {
         anchors.fill: parent
         hoverEnabled: true
@@ -272,14 +261,20 @@ Item {
         }
     }
 
-    Rectangle {
+    PlayerControls {
         id: controlBar
         anchors.bottom: parent.bottom
         anchors.left: parent.left
         anchors.right: parent.right
-        height: 60
-        color: Theme.bgOverlay
         opacity: 1.0
+
+        // Send data in to the controls
+        isPaused: videoPlayer.isPaused
+        currentTime: videoPlayer.currentTime
+        totalDuration: videoPlayer.totalDuration
+        currentVolume: root.currentVolume
+        isMuted: root.isMuted
+        isFullscreen: root.isFullscreen
 
         Behavior on opacity {
             NumberAnimation {
@@ -287,276 +282,39 @@ Item {
             }
         }
 
-        RowLayout {
-            anchors.fill: parent
-            anchors.margins: 15
-            spacing: 15
-
-            Button {
-                id: backBtn
-                Layout.preferredWidth: 44
-                Layout.preferredHeight: 44
-                hoverEnabled: true
-                focusPolicy: Qt.NoFocus
-
-                icon.source: "back.svg"
-                icon.width: 22
-                icon.height: 22
-
-                // Matches the hover color transition of all other buttons
-                icon.color: backBtn.hovered ? Theme.iconColor : Theme.iconHoverColor
-
-                background: Rectangle {
-                    color: "transparent"
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    acceptedButtons: Qt.NoButton
-                }
-
-                onClicked: {
-                    root.stopVideo();
-                    root.backClicked(); // Tell Main.qml we want to go back!
-                }
+        // Handle signals coming OUT of the controls
+        onBackClicked: {
+            root.stopVideo();
+            root.backClicked();
+        }
+        onTogglePlayPause: {
+            videoPlayer.isPaused = !videoPlayer.isPaused;
+            videoPlayer.setProperty("pause", videoPlayer.isPaused ? "yes" : "no");
+        }
+        onSeekRequested: position => {
+            videoPlayer.command(["seek", position, "absolute"]);
+        }
+        onVolumeChanged: volume => {
+            root.currentVolume = volume;
+            if (root.isMuted && volume > 0) {
+                root.isMuted = false;
+                videoPlayer.setProperty("mute", "no");
             }
-
-            Button {
-                id: playPauseBtn
-                Layout.preferredWidth: 44
-                Layout.preferredHeight: 44
-                hoverEnabled: true
-                focusPolicy: Qt.NoFocus
-
-                // Dynamically swap the icon based on the player state
-                icon.source: videoPlayer.isPaused ? "play.svg" : "pause.svg"
-
-                icon.width: 22
-                icon.height: 22
-
-                icon.color: playPauseBtn.hovered ? Theme.iconColor : Theme.iconHoverColor
-
-                background: Rectangle {
-                    color: "transparent"
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    acceptedButtons: Qt.NoButton
-                }
-
-                onClicked: {
-                    videoPlayer.isPaused = !videoPlayer.isPaused;
-                    videoPlayer.setProperty("pause", videoPlayer.isPaused ? "yes" : "no");
-                }
-            }
-
-            Text {
-                text: formatTime(videoPlayer.currentTime)
-                color: Theme.textTitle
-                font.pixelSize: 16
-            }
-
-            Slider {
-                id: seekSlider
-                Layout.fillWidth: true
-                Layout.alignment: Qt.AlignVCenter
-                from: 0
-                hoverEnabled: true
-                focusPolicy: Qt.NoFocus
-
-                // 1. CUSTOMIZE THE TRACK (Background)
-                background: Rectangle {
-                    x: seekSlider.leftPadding
-                    y: seekSlider.topPadding + seekSlider.availableHeight / 2 - height / 2
-                    implicitWidth: 200 // This is a baseline, Layout.fillWidth overrides it anyway
-                    implicitHeight: 4 // Thickness of the track
-                    color: Theme.progressToComplete
-                    width: seekSlider.availableWidth
-                    height: implicitHeight
-                    radius: 2
-
-                    // The filled portion of the track showing playback progress
-                    Rectangle {
-                        width: seekSlider.visualPosition * parent.width
-                        height: parent.height
-                        color: Theme.iconColor
-                        radius: 2
-                    }
-                }
-
-                // 2. CUSTOMIZE THE KNOB (Handle)
-                handle: Rectangle {
-                    x: seekSlider.leftPadding + seekSlider.visualPosition * (seekSlider.availableWidth - width)
-                    y: seekSlider.topPadding + seekSlider.availableHeight / 2 - height / 2
-                    visible: seekSlider.pressed || seekSlider.hovered
-                    implicitWidth: 12
-                    implicitHeight: 12
-                    radius: 6 // Makes it a perfect circle
-                    color: Theme.iconColor
-                }
-
-                onMoved: videoPlayer.command(["seek", seekSlider.value, "absolute"])
-            }
-            Text {
-                text: formatTime(videoPlayer.totalDuration)
-                color: Theme.textTitle
-                font.pixelSize: 16
-            }
-
-            Button {
-                id: volBtn
-                Layout.preferredWidth: 44
-                Layout.preferredHeight: 44
-                hoverEnabled: true
-                focusPolicy: Qt.NoFocus
-
-                // Dynamically swap the icon based on mute state or zero volume
-                icon.source: root.isMuted || root.currentVolume === 0 ? "volume-mute.svg" : "volume-up.svg"
-
-                icon.width: 22
-                icon.height: 22
-
-                icon.color: volBtn.hovered ? Theme.iconColor : Theme.iconHoverColor
-
-                background: Rectangle {
-                    color: "transparent"
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    acceptedButtons: Qt.NoButton
-                }
-
-                onClicked: {
-                    root.isMuted = !root.isMuted;
-                    videoPlayer.setProperty("mute", root.isMuted ? "yes" : "no");
-                }
-            }
-
-            Slider {
-                id: volumeSlider
-                Layout.preferredWidth: 100
-                Layout.alignment: Qt.AlignVCenter // Keeps it perfectly centered with the buttons
-                from: 0
-                to: 100
-                value: root.currentVolume
-                hoverEnabled: true
-                focusPolicy: Qt.NoFocus
-
-                // CUSTOMIZE THE TRACK (Background)
-                background: Rectangle {
-                    x: volumeSlider.leftPadding
-                    y: volumeSlider.topPadding + volumeSlider.availableHeight / 2 - height / 2
-                    implicitWidth: 100
-                    implicitHeight: 4 // Thickness of the track
-                    width: volumeSlider.availableWidth
-                    height: implicitHeight
-                    radius: 2
-                    color: Theme.progressToComplete
-
-                    // The filled portion of the track
-                    Rectangle {
-                        width: volumeSlider.visualPosition * parent.width
-                        height: parent.height
-                        color: volumeSlider.hovered || volumeSlider.pressed ? Theme.iconColor : Theme.iconHoverColor
-                        radius: 2
-                    }
-                }
-
-                // CUSTOMIZE THE KNOB (Handle)
-                handle: Rectangle {
-                    x: volumeSlider.leftPadding + volumeSlider.visualPosition * (volumeSlider.availableWidth - width)
-                    y: volumeSlider.topPadding + volumeSlider.availableHeight / 2 - height / 2
-                    implicitWidth: 12
-                    implicitHeight: 12
-                    radius: 6 // Makes it a perfect circle
-                    color: volumeSlider.pressed || volumeSlider.hovered ? Theme.iconColor : Theme.iconHoverColor
-
-                    // Slightly enlarge the knob when interacting with it
-                    scale: volumeSlider.pressed || volumeSlider.hovered ? 1.2 : 1.0
-                }
-
-                onMoved: {
-                    root.currentVolume = value;
-                    // Auto-unmute if the user drags the slider up while muted
-                    if (root.isMuted && value > 0) {
-                        root.isMuted = false;
-                        videoPlayer.setProperty("mute", "no");
-                    }
-                    videoPlayer.setProperty("volume", root.currentVolume);
-                }
-            }
-
-            Button {
-                id: subBtn
-                Layout.preferredWidth: 44
-                Layout.preferredHeight: 44
-                hoverEnabled: true
-                focusPolicy: Qt.NoFocus
-
-                icon.source: "subtitles.svg"
-                icon.width: 28
-                icon.height: 28
-
-                icon.color: subBtn.hovered ? Theme.iconColor : Theme.iconHoverColor
-
-                background: Rectangle {
-                    color: "transparent"
-                }
-
-                // Use MouseArea to intercept BOTH Left and Right clicks
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-
-                    // Tell Qt to listen for both mouse buttons
-                    acceptedButtons: Qt.LeftButton | Qt.RightButton
-
-                    onClicked: mouse => {
-                        if (mouse.button === Qt.RightButton) {
-                            // RIGHT CLICK: Open the native file picker
-                            subtitleFileDialog.open();
-                        } else {
-                            // LEFT CLICK: Cycle embedded/currently loaded subtitles
-                            videoPlayer.command(["cycle", "sub"]);
-                            videoPlayer.command(["show-text", "Subtitles cycled"]);
-                        }
-                    }
-                }
-            }
-
-            Button {
-                id: fullBtn
-                Layout.preferredWidth: 44
-                Layout.preferredHeight: 44
-                hoverEnabled: true
-                focusPolicy: Qt.NoFocus
-
-                // Will dynamically change the icon if we are in fullscreen
-                icon.source: root.isFullscreen ? "fullscreen-min.svg" : "fullscreen-max.svg"
-
-                icon.width: 22
-                icon.height: 22
-
-                // Changed subBtn.hovered to fullBtn.hovered
-                icon.color: fullBtn.hovered ? Theme.iconColor : Theme.iconHoverColor
-
-                background: Rectangle {
-                    color: "transparent"
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    acceptedButtons: Qt.NoButton
-                }
-
-                onClicked: root.fullscreenRequested()
-            }
+            videoPlayer.setProperty("volume", root.currentVolume);
+        }
+        onToggleMute: {
+            root.isMuted = !root.isMuted;
+            videoPlayer.setProperty("mute", root.isMuted ? "yes" : "no");
+        }
+        onCycleSubtitles: {
+            videoPlayer.command(["cycle", "sub"]);
+            videoPlayer.command(["show-text", "Subtitles cycled"]);
+        }
+        onAddSubtitle: {
+            subtitleFileDialog.open();
+        }
+        onToggleFullscreen: {
+            root.fullscreenRequested();
         }
     }
 }
