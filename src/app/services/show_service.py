@@ -5,8 +5,10 @@ from sqlalchemy.orm import selectinload
 from app.models.media import Episode, MediaFile, Season, TVShow
 
 
-async def get_all_shows(db: AsyncSession) -> list[TVShow]:
-    stmt = select(TVShow)
+async def get_all_shows(
+    db: AsyncSession, skip: int = 0, limit: int = 50
+) -> list[TVShow]:
+    stmt = select(TVShow).offset(skip).limit(limit)
     result = await db.execute(stmt)
     shows = result.scalars().all()
 

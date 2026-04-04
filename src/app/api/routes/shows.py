@@ -11,12 +11,14 @@ router = APIRouter(prefix='/api', tags=['shows'])
 
 @router.get('/shows')
 async def get_shows(
+    skip: int = 0,
+    limit: int = 50,
     db: AsyncSession = Depends(get_db),
     tmdb_client: TMDBClient = Depends(get_tmdb_client),
 ):
     """Fetches all scanned TV shows and returns them with full poster URLs"""
 
-    shows = await get_all_shows(db)
+    shows = await get_all_shows(db, skip=skip, limit=limit)
 
     return [ShowResponse.from_model(s, tmdb_client) for s in shows]
 

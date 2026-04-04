@@ -11,13 +11,15 @@ router = APIRouter(prefix='/api', tags=['movies'])
 
 @router.get('/movies')
 async def get_movies(
+    skip: int = 0,
+    limit: int = 50,
     db: AsyncSession = Depends(get_db),
     tmdb_client: TMDBClient = Depends(get_tmdb_client),
 ):
     """Fetches all scanned movies and returns them with full poster URLs"""
 
     # Fetch all movies and their attached files
-    movies = await get_all_movies(db)
+    movies = await get_all_movies(db, skip=skip, limit=limit)
 
     # Format response using a list comprehension
     return [MovieResponse.from_model(m, tmdb_client) for m in movies]

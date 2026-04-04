@@ -5,9 +5,12 @@ from sqlalchemy.orm import selectinload
 from app.models.media import MediaFile, Movie
 
 
-async def get_all_movies(db: AsyncSession):
-    stmt = select(Movie).options(
-        selectinload(Movie.files).selectinload(MediaFile.progress)
+async def get_all_movies(db: AsyncSession, skip: int = 0, limit: int = 50):
+    stmt = (
+        select(Movie)
+        .options(selectinload(Movie.files).selectinload(MediaFile.progress))
+        .offset(skip)
+        .limit(limit)
     )
     result = await db.execute(stmt)
     return result.scalars().all()
