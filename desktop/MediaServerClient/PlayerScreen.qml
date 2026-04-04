@@ -200,13 +200,10 @@ Item {
 
         onTimeChanged: time => {
             currentTime = time;
-            if (!seekSlider.pressed)
-                seekSlider.value = time;
         }
 
         onDurationChanged: duration => {
             totalDuration = duration;
-            seekSlider.to = duration;
         }
 
         TapHandler {
