@@ -303,6 +303,10 @@ Item {
             root.isMuted = !root.isMuted;
             videoPlayer.setProperty("mute", root.isMuted ? "yes" : "no");
         }
+        onCycleAudio: {
+            videoPlayer.command(["cycle", "audio"]);
+            videoPlayer.command(["show-text", "Audio track cycled"]);
+        }
         onCycleSubtitles: {
             videoPlayer.command(["cycle", "sub"]);
             videoPlayer.command(["show-text", "Subtitles cycled"]);

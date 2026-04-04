@@ -15,21 +15,23 @@ Rectangle {
     property bool isFullscreen: false
 
     // SIGNALS (Emitted out to PlayerScreen to actually execute the commands)
-    signal backClicked()
-    signal togglePlayPause()
+    signal backClicked
+    signal togglePlayPause
     signal seekRequested(double position)
     signal volumeChanged(double volume)
-    signal toggleMute()
-    signal cycleSubtitles()
-    signal addSubtitle()
-    signal toggleFullscreen()
+    signal toggleMute
+    signal cycleAudio
+    signal cycleSubtitles
+    signal addSubtitle
+    signal toggleFullscreen
 
     height: 60
     color: Theme.bgOverlay
 
     // UI needs to format time
     function formatTime(timeInSeconds) {
-        if (isNaN(timeInSeconds) || timeInSeconds < 0) return "00:00";
+        if (isNaN(timeInSeconds) || timeInSeconds < 0)
+            return "00:00";
         let h = Math.floor(timeInSeconds / 3600);
         let m = Math.floor((timeInSeconds % 3600) / 60);
         let s = Math.floor(timeInSeconds % 60);
@@ -53,7 +55,9 @@ Rectangle {
             icon.width: 22
             icon.height: 22
             icon.color: backBtn.hovered ? Theme.iconColor : Theme.iconHoverColor
-            background: Rectangle { color: "transparent" }
+            background: Rectangle {
+                color: "transparent"
+            }
 
             MouseArea {
                 anchors.fill: parent
@@ -72,7 +76,9 @@ Rectangle {
             icon.width: 22
             icon.height: 22
             icon.color: playPauseBtn.hovered ? Theme.iconColor : Theme.iconHoverColor
-            background: Rectangle { color: "transparent" }
+            background: Rectangle {
+                color: "transparent"
+            }
 
             MouseArea {
                 anchors.fill: parent
@@ -143,7 +149,9 @@ Rectangle {
             icon.width: 22
             icon.height: 22
             icon.color: volBtn.hovered ? Theme.iconColor : Theme.iconHoverColor
-            background: Rectangle { color: "transparent" }
+            background: Rectangle {
+                color: "transparent"
+            }
 
             MouseArea {
                 anchors.fill: parent
@@ -193,6 +201,29 @@ Rectangle {
         }
 
         Button {
+            id: audioBtn
+            Layout.preferredWidth: 44
+            Layout.preferredHeight: 44
+            hoverEnabled: true
+            focusPolicy: Qt.NoFocus
+
+            icon.source: "audio.svg"
+            icon.width: 24
+            icon.height: 24
+
+            icon.color: audioBtn.hovered ? Theme.iconColor : Theme.iconHoverColor
+            background: Rectangle {
+                color: "transparent"
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.cycleAudio()
+            }
+        }
+
+        Button {
             id: subBtn
             Layout.preferredWidth: 44
             Layout.preferredHeight: 44
@@ -202,7 +233,9 @@ Rectangle {
             icon.width: 28
             icon.height: 28
             icon.color: subBtn.hovered ? Theme.iconColor : Theme.iconHoverColor
-            background: Rectangle { color: "transparent" }
+            background: Rectangle {
+                color: "transparent"
+            }
 
             MouseArea {
                 anchors.fill: parent
@@ -228,7 +261,9 @@ Rectangle {
             icon.width: 22
             icon.height: 22
             icon.color: fullBtn.hovered ? Theme.iconColor : Theme.iconHoverColor
-            background: Rectangle { color: "transparent" }
+            background: Rectangle {
+                color: "transparent"
+            }
 
             MouseArea {
                 anchors.fill: parent
