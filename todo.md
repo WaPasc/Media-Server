@@ -1,8 +1,6 @@
 # Todo List
 
 ## Frontend & Player Experience
-- [ ] Audio Track Selection: Add a button in the video player to cycle through audio tracks (crucial for anime or dual-audio MKV files).
-- [ ] Pagination / Infinite Scroll: Add lazy-loading to the frontend to handle rendering thousands of movies efficiently without overloading the DOM/QML.
 - [ ] Metadata Refresh: Add a button in the UI to force an update from TMDB in case a poster changes or new cast info is added.
 
 ## Library & Media Management
