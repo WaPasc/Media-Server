@@ -15,6 +15,12 @@ Item {
     property string searchQuery: ""
     property var rawMediaData: [] // Stores the unfiltered JSON
 
+    // PAGINATION PROPERTIES
+    property int currentSkip: 0
+    property int fetchLimit: 50
+    property bool isLoading: false
+    property bool hasMore: true
+
     ListModel {
         id: mediaModel
     }
@@ -48,25 +54,48 @@ Item {
     }
 
     Component.onCompleted: {
-        fetchMedia();
+        fetchMedia(true); // Pass true to initialize
         fetchContinueWatching();
     }
 
     onVisibleChanged: {
         if (visible) {
-            fetchMedia();
+            // Only fetch media if it's completely empty so we don't lose scroll position
+            if (rawMediaData.length === 0) {
+                fetchMedia(true);
+            }
             fetchContinueWatching();
         }
     }
 
-    function fetchMedia() {
+    // reset parameter and pagination logic
+    function fetchMedia(reset = false) {
+        if (reset) {
+            currentSkip = 0;
+            hasMore = true;
+            rawMediaData = [];
+            mediaModel.clear();
+        }
+
+        if (isLoading || !hasMore) return;
+        isLoading = true;
+
         let endpoint = (currentMode === "movies") ? "/api/movies" : "/api/shows";
+        endpoint += "?skip=" + currentSkip + "&limit=" + fetchLimit; // Append pagination limits
 
         API.get(endpoint).then(function (data) {
-            rawMediaData = data;
+            if (data.length < fetchLimit) {
+                hasMore = false; // We reached the end of the library
+            }
+
+            rawMediaData = rawMediaData.concat(data); // Append the new batch
             applyFilter();
+
+            currentSkip += fetchLimit;
+            isLoading = false;
         }).catch(function (error) {
             console.error("Failed to load media:", error);
+            isLoading = false;
         });
     }
 
@@ -142,7 +171,7 @@ Item {
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
                         currentMode = "movies";
-                        fetchMedia();
+                        fetchMedia(true); // Pass true to reset list
                     }
                 }
             }
@@ -160,7 +189,7 @@ Item {
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
                         currentMode = "shows";
-                        fetchMedia();
+                        fetchMedia(true); // Pass true to reset list
                     }
                 }
             }
@@ -206,6 +235,13 @@ Item {
         anchors.right: parent.right
         anchors.margins: 48
         anchors.topMargin: 32
+
+        // Infinite scroll listener
+        onContentYChanged: {
+            if (contentY + height >= contentHeight - 300) {
+                root.fetchMedia(false);
+            }
+        }
 
         TapHandler {
             onTapped: root.forceActiveFocus()
