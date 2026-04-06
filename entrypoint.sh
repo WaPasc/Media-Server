@@ -4,12 +4,11 @@ set -e
 echo "Starting Media Server backend..."
 
 # Run Alembic database migrations automatically
-# This ensures Postgres DB is perfectly up to date before starting
+# We run this from the root (/app) so it can read pyproject.toml!
 echo "Running database migrations..."
-cd src
 alembic upgrade head
-cd ..
 
 # Start the FastAPI application using Uvicorn
+# We use python -m to ensure it finds everything in the venv
 echo "Starting Uvicorn server..."
-exec uvicorn src.app.main:app --host 0.0.0.0 --port 8000 --proxy-headers
+exec python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers

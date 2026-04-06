@@ -1,5 +1,5 @@
 .env
-venv
+**venv**
 Architecture*
 data_folder
 __pycache__

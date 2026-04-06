@@ -1,5 +1,5 @@
 # STAGE 1: Builder
-FROM python:3.12-slim as builder
+FROM python:3.12-slim AS builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -14,8 +14,9 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Set working directory for the build
 WORKDIR /build
 
-# COPY dependency files (pyproject.toml)
+# COPY dependency files AND the src directory so pip can package it
 COPY pyproject.toml ./
+COPY src/ ./src/
 
 # INSTALL the dependencies into the virtual environment
 RUN pip install --no-cache-dir --upgrade pip && \
@@ -49,7 +50,7 @@ RUN mkdir -p /app/data /media && \
 # Copy the rest of the application code
 COPY --chown=appuser:appgroup . .
 
-# Tell Python exactly where the source code is so it can find "app"
+# Tell Python exactly where the source code is
 ENV PYTHONPATH="/app/src"
 
 # Switch to the non-root user

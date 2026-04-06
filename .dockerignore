@@ -1,0 +1,22 @@
+# Git
+.git
+.gitignore
+
+# Database Data
+postgres-data/
+*.sqlite3
+
+# Python Virtual Environments
+.venv/
+.venv-test/
+__pycache__/
+*.pyc
+
+# Frontend & Desktop (Not needed for the backend container)
+frontend/
+desktop/
+node_modules/
+
+# Mac/Windows clutter
+.DS_Store
+Thumbs.db
