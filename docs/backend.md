@@ -286,17 +286,3 @@ Typical flow:
 4. Start app: python src/app/main.py.
 5. Add scan directories via scanner API.
 6. Trigger /api/scanner/scan.
-
-## 14) Practical Notes for Contributors
-
-- Keep business logic in services, not routes.
-- Keep API contracts in schemas and use mappers for composite payloads.
-- Preserve soft-delete availability behavior (do not remove progress/history with disk outages).
-- Any auth/multi-user work should replace hardcoded user_id=1 in progress/history endpoints and mapping logic.
-
-## 15) Future Improvement Targets
-
-- Authentication and real user identity propagation.
-- Better scanner task isolation (new session inside background task for availability scan).
-- More explicit API error model for TMDB and media probe/transcode failures.
-- Pagination metadata (total count, next cursor/page info) for list endpoints.
