@@ -310,7 +310,13 @@ async def _get_or_create_season(
 
 
 async def _get_or_create_episode(
-    session, season_id, show_tmdb_id, season_number, episode_number, cache
+    session,
+    tmdb: TMDBClient,
+    season_id,
+    show_tmdb_id,
+    season_number,
+    episode_number,
+    cache,
 ):
     """Handles finding or creating an Episode record."""
     stmt = select(Episode).where(
@@ -319,11 +325,21 @@ async def _get_or_create_episode(
     result = await session.execute(stmt)
     episode = result.scalars().first()
 
+    # If the episode doesn't exist, we must have TMDB data to build it
     if not episode:
         tmdb_season_key = f'{show_tmdb_id}_{season_number}'
-
-        # setdefault to ensure we safely access the cache
         tmdb_seasons = cache.setdefault('tmdb_seasons', {})
+
+        # If we skipped fetching the season earlier because it
+        # already existed in the DB, we force a fetch now for the new episodes
+        if tmdb_season_key not in tmdb_seasons:
+            logger.info(
+                f'Fetching fresh TMDB data for Show {show_tmdb_id} Season {season_number}...'
+            )
+            tmdb_seasons[tmdb_season_key] = await tmdb.get_tv_season(
+                show_tmdb_id, season_number
+            )
+
         season_payload = tmdb_seasons.get(tmdb_season_key, {})
 
         ep_data = next(
@@ -340,8 +356,8 @@ async def _get_or_create_episode(
             tmdb_id=ep_data.get('id') if ep_data else None,
             season_number=season_number,
             episode_number=episode_number,
-            title=ep_data.get('name', f'Episode {episode_number}')
-            if ep_data
+            title=ep_data.get('name')
+            if ep_data and ep_data.get('name')
             else f'Episode {episode_number}',
             overview=ep_data.get('overview') if ep_data else None,
             still_path=ep_data.get('still_path') if ep_data else None,
@@ -390,7 +406,7 @@ async def process_tv_file(
 
     # Get/Create Episode (NEW CLEAN CALL)
     episode_id = await _get_or_create_episode(
-        session, season_id, show_tmdb_id, season_number, episode_number, cache
+        session, tmdb, season_id, show_tmdb_id, season_number, episode_number, cache
     )
 
     # Link File
