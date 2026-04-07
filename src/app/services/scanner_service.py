@@ -7,11 +7,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.core.database import AsyncSessionLocal
-from app.metadata import extract_local_info
 from app.models.media import Episode, MediaFile, Movie, ScanDirectory, Season, TVShow
 from app.models.user import UserShowProgress, WatchProgress  # noqa: F401
 from app.services.tmdb_client import TMDBClient
 from app.utils.datetime import get_brussels_time
+from app.utils.metadata import extract_local_info
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
