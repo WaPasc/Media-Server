@@ -1,6 +1,6 @@
 import mimetypes
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,7 +15,6 @@ router = APIRouter(prefix='/api', tags=['stream'])
 async def stream_video(
     file_id: int,
     direct_play: bool = False,
-    range_header: str = Header(None, alias='Range'),
     db: AsyncSession = Depends(get_db),
 ):
     """Streams video files. Natively streams MP4/WebM, and live-transcodes MKV."""
