@@ -145,61 +145,89 @@ Item {
                 height: 40
             }
 
-            // Play Button
-            Button {
-                id: playBtn
-                width: 220
-                height: 56
+            Row {
+                id: actionsRow
+                spacing: 15 // Gap between the Play button and Refresh button
 
-                contentItem: Row {
-                    anchors.centerIn: parent
-                    spacing: 12
-                    Item {
-                        height: 1
-                        width: 12
-                    }
-                    Text {
-                        text: "▶" // Unicode substitute for the SVG Play icon
-                        font.pixelSize: 20
-                        color: "black"
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                    Text {
-                        text: "Play Movie"
-                        font.pixelSize: 20
-                        font.bold: true
-                        color: "black"
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                }
+                // Play Button
+                Button {
+                    id: playBtn
+                    width: 220
+                    height: 56
 
-                background: Rectangle {
-                    color: "white"
-                    radius: 8
-                    scale: playBtn.hovered ? 1.05 : 1.0
-                    Behavior on scale {
-                        NumberAnimation {
-                            duration: 150
+                    contentItem: Row {
+                        anchors.centerIn: parent
+                        spacing: 12
+                        Item {
+                            height: 1
+                            width: 12
+                        }
+                        Text {
+                            text: "▶" // Unicode substitute for the SVG Play icon
+                            font.pixelSize: 20
+                            color: "black"
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        Text {
+                            text: "Play Movie"
+                            font.pixelSize: 20
+                            font.bold: true
+                            color: "black"
+                            anchors.verticalCenter: parent.verticalCenter
                         }
                     }
-                }
 
-                onClicked: {
-                    if (fileId !== -1) {
-                        let streamUrl = "http://127.0.0.1:8000/api/stream/" + fileId + "?direct_play=true";
-                        root.moviePlay(streamUrl, fileId);
-                    } else {
-                        console.log("No physical file is attached to this movie!");
+                    background: Rectangle {
+                        color: "white"
+                        radius: 8
+                        scale: playBtn.hovered ? 1.05 : 1.0
+                        Behavior on scale {
+                            NumberAnimation {
+                                duration: 150
+                            }
+                        }
+                    }
+
+                    onClicked: {
+                        if (fileId !== -1) {
+                            let streamUrl = "http://127.0.0.1:8000/api/stream/" + fileId + "?direct_play=true";
+                            root.moviePlay(streamUrl, fileId);
+                        } else {
+                            console.log("No physical file is attached to this movie!");
+                        }
+                    }
+
+                    // Ensures the mouse turns into a pointer finger without blocking the button click
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        acceptedButtons: Qt.NoButton
                     }
                 }
 
-                // Ensures the mouse turns into a pointer finger without blocking the button click
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    acceptedButtons: Qt.NoButton
+                Button {
+                    id: refreshBtn
+                    width: 40
+                    height: 40
+                    anchors.verticalCenter: playBtn.verticalCenter
+                    icon.source: "refresh.svg" // Reuse settings icon or add a refresh.svg
+                    icon.color: Theme.textSecondary
+
+                    background: Rectangle {
+                        color: refreshBtn.hovered ? Theme.bgCardHover : "transparent"
+                        radius: 20
+                    }
+
+                    onClicked: {
+                        API.post("/api/movies/" + movieId + "/refresh").then(function() {
+                            // Signal to the screen to reload its data
+                            root.loadMovieDetails();
+                        });
+                    }
                 }
             }
+
+
 
             Item {
                 width: 1
