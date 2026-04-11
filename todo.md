@@ -1,8 +1,5 @@
 # Todo List
 
-## Frontend & Player Experience
-- [ ] Metadata Refresh: Add a button in the UI to force an update from TMDB in case a poster changes or new cast info is added.
-
 ## Library & Media Management
 - [ ] Add Manual Path: Add a button in the desktop app to add a manual file path to the library.
 
