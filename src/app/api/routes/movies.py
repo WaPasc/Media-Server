@@ -3,8 +3,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_db, get_tmdb_client
 from app.schemas.movies import MovieResponse
-from app.services import metadata_service
-from app.services.movie_service import get_all_movies, get_movie_by_id
+from app.services.movie_service import (
+    get_all_movies,
+    get_movie_by_id,
+    refresh_movie_metadata,
+)
 from app.services.tmdb_client import TMDBClient
 
 router = APIRouter(prefix='/api', tags=['movies'])
@@ -49,7 +52,7 @@ async def refresh_movie(
     db: AsyncSession = Depends(get_db),
     tmdb: TMDBClient = Depends(get_tmdb_client),
 ):
-    updated = await metadata_service.refresh_movie_metadata(db, tmdb, movie_id)
+    updated = await refresh_movie_metadata(db, tmdb, movie_id)
     if not updated:
         raise HTTPException(status_code=404, detail='Movie not found')
     return {'message': 'Metadata refreshed successfully'}
