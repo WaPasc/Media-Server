@@ -77,7 +77,8 @@ Item {
             mediaModel.clear();
         }
 
-        if (isLoading || !hasMore) return;
+        if (isLoading || !hasMore)
+            return;
         isLoading = true;
 
         let endpoint = (currentMode === "movies") ? "/api/movies" : "/api/shows";

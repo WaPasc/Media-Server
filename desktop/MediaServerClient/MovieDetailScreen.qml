@@ -219,15 +219,13 @@ Item {
                     }
 
                     onClicked: {
-                        API.post("/api/movies/" + movieId + "/refresh").then(function() {
+                        API.post("/api/movies/" + movieId + "/refresh").then(function () {
                             // Signal to the screen to reload its data
                             root.loadMovieDetails();
                         });
                     }
                 }
             }
-
-
 
             Item {
                 width: 1

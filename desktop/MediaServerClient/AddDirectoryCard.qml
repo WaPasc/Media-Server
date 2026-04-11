@@ -7,7 +7,7 @@ Rectangle {
     id: root
 
     // Tell the parent screen when a directory was successfully added
-    signal directoryAdded()
+    signal directoryAdded
 
     Layout.fillWidth: true
     Layout.preferredHeight: addDirLayout.implicitHeight + 60
@@ -74,7 +74,11 @@ Rectangle {
                 border.color: mediaTypeCombo.activeFocus || mediaTypeCombo.popup.visible ? Theme.accent : Theme.borderInput
                 border.width: 1
                 radius: 8
-                Behavior on border.color { ColorAnimation { duration: 150 } }
+                Behavior on border.color {
+                    ColorAnimation {
+                        duration: 150
+                    }
+                }
             }
 
             indicator: Canvas {
@@ -87,7 +91,9 @@ Rectangle {
 
                 Connections {
                     target: mediaTypeCombo
-                    function onPressedChanged() { canvas.requestPaint(); }
+                    function onPressedChanged() {
+                        canvas.requestPaint();
+                    }
                 }
 
                 onPaint: {
@@ -108,8 +114,24 @@ Rectangle {
                 implicitHeight: Math.min(contentItem.contentHeight + topPadding + bottomPadding, 200)
                 padding: 4
 
-                enter: Transition { NumberAnimation { property: "opacity"; from: 0.0; to: 1.0; duration: 150; easing.type: Easing.OutQuad } }
-                exit: Transition { NumberAnimation { property: "opacity"; from: 1.0; to: 0.0; duration: 100; easing.type: Easing.InQuad } }
+                enter: Transition {
+                    NumberAnimation {
+                        property: "opacity"
+                        from: 0.0
+                        to: 1.0
+                        duration: 150
+                        easing.type: Easing.OutQuad
+                    }
+                }
+                exit: Transition {
+                    NumberAnimation {
+                        property: "opacity"
+                        from: 1.0
+                        to: 0.0
+                        duration: 100
+                        easing.type: Easing.InQuad
+                    }
+                }
 
                 contentItem: ListView {
                     clip: true
@@ -137,13 +159,21 @@ Rectangle {
                     font.pixelSize: 14
                     verticalAlignment: Text.AlignVCenter
                     leftPadding: 11
-                    Behavior on color { ColorAnimation { duration: 100 } }
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: 100
+                        }
+                    }
                 }
 
                 background: Rectangle {
                     color: itemDelegate.hovered || itemDelegate.highlighted ? Theme.bgCardHover : Theme.bgCard
                     radius: 4
-                    Behavior on color { ColorAnimation { duration: 100 } }
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: 100
+                        }
+                    }
                 }
             }
         }
@@ -166,7 +196,11 @@ Rectangle {
             background: Rectangle {
                 color: addBtn.hovered ? Theme.accentLight : Theme.accent
                 radius: 8
-                Behavior on color { ColorAnimation { duration: 150 } }
+                Behavior on color {
+                    ColorAnimation {
+                        duration: 150
+                    }
+                }
             }
 
             MouseArea {
@@ -204,18 +238,16 @@ Rectangle {
             "media_type": type
         };
 
-        API.post("/api/scanner/directories", payload)
-            .then(function(data) {
-                statusLabel.text = "Directory added successfully!";
-                statusLabel.color = "#10B981";
-                pathInput.text = "";
-                // Tell the parent screen to refresh!
-                root.directoryAdded();
-            })
-            .catch(function(error) {
-                console.error("Failed to add directory:", error);
-                statusLabel.text = "Failed to add directory.";
-                statusLabel.color = "#EF4444";
-            });
+        API.post("/api/scanner/directories", payload).then(function (data) {
+            statusLabel.text = "Directory added successfully!";
+            statusLabel.color = "#10B981";
+            pathInput.text = "";
+            // Tell the parent screen to refresh!
+            root.directoryAdded();
+        }).catch(function (error) {
+            console.error("Failed to add directory:", error);
+            statusLabel.text = "Failed to add directory.";
+            statusLabel.color = "#EF4444";
+        });
     }
 }

@@ -30,7 +30,10 @@ Item {
 
         scale: mouseArea.containsMouse ? 1.05 : 1.0
         Behavior on scale {
-            NumberAnimation { duration: 300; easing.type: Easing.OutQuart }
+            NumberAnimation {
+                duration: 300
+                easing.type: Easing.OutQuart
+            }
         }
 
         // POSTER CONTAINER
@@ -123,7 +126,11 @@ Item {
 
                 visible: root.isCompleted && root.showCheckmark
 
-                Behavior on opacity { NumberAnimation { duration: 200 } }
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: 200
+                    }
+                }
                 opacity: visible ? 1.0 : 0.0
             }
         }

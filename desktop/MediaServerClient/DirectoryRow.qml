@@ -70,7 +70,11 @@ Rectangle {
                 border.color: "#EF4444"
                 border.width: 1
                 radius: 6
-                Behavior on color { ColorAnimation { duration: 150 } }
+                Behavior on color {
+                    ColorAnimation {
+                        duration: 150
+                    }
+                }
             }
 
             MouseArea {

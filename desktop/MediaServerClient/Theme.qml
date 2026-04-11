@@ -38,8 +38,7 @@ QtObject {
     readonly property color textTertiary: "#9CA3AF"
     readonly property color accentLight: "#818CF8"
 
-
-    readonly property color iconColor: "white";
-    readonly property color iconHoverColor: "#aaaaaa";
-    readonly property color progressToComplete: "#666666";
+    readonly property color iconColor: "white"
+    readonly property color iconHoverColor: "#aaaaaa"
+    readonly property color progressToComplete: "#666666"
 }
