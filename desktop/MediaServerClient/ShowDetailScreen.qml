@@ -256,57 +256,86 @@ Item {
             } // Margin (mb-10)
 
             // THE CONTINUE WATCHING BUTTON
-            Rectangle {
-                width: nextEpisodeText.width + 64 // Auto-sizes width to fit the text
-                height: 48
-                radius: 24
-                color: playMouseArea.containsMouse ? "#90909090" : "#66808080"
 
-                // Hides completely if finished the show or no files are available
-                visible: root.nextEpisode !== null
+            Row {
+                id: actionsRow
+                spacing: 15
 
-                Behavior on color {
-                    ColorAnimation {
-                        duration: 150
-                    }
-                }
+                Rectangle {
+                    id: continueWatchingButton
+                    width: nextEpisodeText.width + 64 // Auto-sizes width to fit the text
+                    height: 48
+                    radius: 24
+                    color: playMouseArea.containsMouse ? "#90909090" : "#66808080"
 
-                Row {
-                    anchors.centerIn: parent
-                    spacing: 12
+                    // Hides completely if finished the show or no files are available
+                    visible: root.nextEpisode !== null
 
-                    Text {
-                        text: "▶"
-                        color: "white"
-                        font.pixelSize: 18
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-
-                    Text {
-                        id: nextEpisodeText
-                        text: root.nextEpisode ? ("Play S" + root.nextEpisode.seasonNum + " E" + root.nextEpisode.episodeNum + " • " + root.nextEpisode.title) : ""
-                        color: "white"
-                        font.pixelSize: 16
-                        font.bold: true
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                }
-
-                MouseArea {
-                    id: playMouseArea
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    hoverEnabled: true
-                    onClicked: {
-                        if (root.nextEpisode) {
-                            // Automatically switch the dropdown to the season about to be watched
-                            savedSeasonIndex = root.nextEpisode.seasonIndex;
-                            seasonComboBox.currentIndex = savedSeasonIndex;
-
-                            // Trigger the player
-                            let streamUrl = "http://127.0.0.1:8000/api/stream/" + root.nextEpisode.fileId + "?direct_play=true";
-                            root.episodePlay(streamUrl, root.nextEpisode.fileId);
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: 150
                         }
+                    }
+
+                    Row {
+                        anchors.centerIn: parent
+                        spacing: 12
+
+                        Text {
+                            text: "▶"
+                            color: "white"
+                            font.pixelSize: 18
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+
+                        Text {
+                            id: nextEpisodeText
+                            text: root.nextEpisode ? ("Play S" + root.nextEpisode.seasonNum + " E" + root.nextEpisode.episodeNum + " • " + root.nextEpisode.title) : ""
+                            color: "white"
+                            font.pixelSize: 16
+                            font.bold: true
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+
+                    MouseArea {
+                        id: playMouseArea
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        hoverEnabled: true
+                        onClicked: {
+                            if (root.nextEpisode) {
+                                // Automatically switch the dropdown to the season about to be watched
+                                savedSeasonIndex = root.nextEpisode.seasonIndex;
+                                seasonComboBox.currentIndex = savedSeasonIndex;
+
+                                // Trigger the player
+                                let streamUrl = "http://127.0.0.1:8000/api/stream/" + root.nextEpisode.fileId + "?direct_play=true";
+                                root.episodePlay(streamUrl, root.nextEpisode.fileId);
+                            }
+                        }
+                    }
+                }
+
+                Button {
+                    id: refreshBtn
+                    width: 40
+                    height: 40
+                    anchors.verticalCenter: continueWatchingButton.verticalCenter
+                    icon.source: "refresh.svg" // Reuse settings icon or add a refresh.svg
+                    icon.color: Theme.textSecondary
+
+                    background: Rectangle {
+                        color: refreshBtn.hovered ? Theme.bgCardHover : "transparent"
+                        radius: 20
+                    }
+
+                    onClicked: {
+                        API.post("/api/show/" + showId + "/refresh").then(function () {
+                            // Signal to the screen to reload its data
+                            root.loadShowDetails();
+                            root.loadEpisodesForSeason(savedSeasonIndex);
+                        });
                     }
                 }
             }

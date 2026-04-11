@@ -3,7 +3,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_db, get_tmdb_client
 from app.schemas.shows import ShowDetailResponse, ShowResponse
-from app.services.show_service import get_all_shows, get_show_by_id
+from app.services.show_service import (
+    get_all_shows,
+    get_show_by_id,
+    refresh_show_metadata,
+)
 from app.services.tmdb_client import TMDBClient
 
 router = APIRouter(prefix='/api', tags=['shows'])
@@ -37,3 +41,15 @@ async def get_show_details(
         raise HTTPException(status_code=404, detail='TV show not found')
 
     return ShowDetailResponse.from_model(show, tmdb_client)
+
+
+@router.post('/show/{show_id}/refresh')
+async def refresh_show(
+    show_id: int,
+    db: AsyncSession = Depends(get_db),
+    tmdb: TMDBClient = Depends(get_tmdb_client),
+):
+    updated = await refresh_show_metadata(db, tmdb, show_id)
+    if not updated:
+        raise HTTPException(status_code=404, detail='TV show not found')
+    return {'message': 'Metadata refreshed successfully'}
