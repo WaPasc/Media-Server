@@ -1,8 +1,5 @@
 # Todo List
 
-## Library & Media Management
-- [ ] Add Manual Path: Add a button in the desktop app to add a manual file path to the library.
-
 ## User Management
 - [ ] User Authentication: Implement a secure login system.
 - [ ] User Profiles: Allow users to create and manage their profiles, including preferences and watch history.
