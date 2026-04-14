@@ -1,44 +1,66 @@
-# Steps to create the executable
+# Build Executable (Linux)
 
-## Linux
+## 1. Configure release build
 
-### 1. Deployment
-Move to build directory
 ```bash
 mkdir -p build && cd build
+
+/home/yourUserName/Qt/Tools/CMake/bin/cmake \
+  -DCMAKE_PREFIX_PATH=/home/yourUserName/Qt/6.10.2/gcc_64 \
+  -DCMAKE_BUILD_TYPE=Release ..
 ```
 
-Run the install command to populate `deployed_app` folder
+## 2. Build and install into AppDir
+
 ```bash
-cmake --install . --prefix "$(pwd)/deployed_app"
+cmake --build . --config Release
+cmake --install . --prefix "$PWD/deployed_app"
 ```
 
-Manually add libmpv (only needed for systems that don't have it installed globally)
+## 3. Bundle runtime dependency (libmpv)
+
+Run this only if `libmpv` is not guaranteed on the target machine.
+
 ```bash
-cp /usr/lib/x86_64-linux-gnu/libmpv.so.2 "$(pwd)/deployed_app/lib/"
+mkdir -p "$PWD/deployed_app/lib"
+cp /usr/lib/x86_64-linux-gnu/libmpv.so.2 "$PWD/deployed_app/lib/"
 ```
 
-### 2. Metadata
-Create a .desktop file for the app (e.g., `MediaServerClient.desktop`) with the following content:
+## 4. Add AppImage metadata
+
+Create `deployed_app/MediaServerClient.desktop`:
+
 ```ini
 [Desktop Entry]
 Type=Application
 Name=Media Server Client
 Exec=appMediaServerClient
-Icon=/path/to/icon.png
+Icon=MediaServerClient
 Terminal=false
 Categories=Multimedia;Video;
 ```
+make sure to not use the extenstion of the icon file in the `Icon` field.
+Copy your icon to `deployed_app/MediaServerClient.png`.
 
-Copy icon file to the deployed_app folder
+Create the AppImage entry point:
 
-Create the entry point symlink for the executable
 ```bash
 ln -sf bin/appMediaServerClient "$PWD/deployed_app/AppRun"
 ```
 
-### 3. Packaging
-Use a tool like `appimagetool` to create an AppImage from the `deployed_app` folder:
+## 5. Package
+
 ```bash
-./appimagetool-x86_64.AppImage .../deployed_app/MediaServerClient.AppImage
+./appimagetool-x86_64.AppImage "$PWD/deployed_app" "$PWD/MediaServerClient-x86_64.AppImage"
 ```
+
+
+
+
+# Rerunning the cycle
+
+**Rebuild**: `cmake --build . --config Release` inside the build folder.
+
+**Redeploy**: `cmake --install . --prefix "$PWD/deployed_app"`
+
+**Repackage**: Run appimagetool on the deployed_app folder again.
