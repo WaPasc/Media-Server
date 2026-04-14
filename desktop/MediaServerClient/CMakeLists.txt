@@ -81,3 +81,13 @@ install(TARGETS appMediaServerClient
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
+
+# Generate the QML deployment script
+# This script will automatically collect QML imports and Qt libraries at install time
+qt_generate_deploy_qml_app_script(
+    TARGET appMediaServerClient
+    OUTPUT_SCRIPT deploy_script
+)
+
+# Tell CMake to run that script during the 'install' phase
+install(SCRIPT ${deploy_script})
