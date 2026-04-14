@@ -1,5 +1,9 @@
 # Todo List
 
+## Offline Functionality
+-  [ ] Caching so desktop app feels snappy.
+-  [ ] MinIO for local storage of media files, allowing users to access their media library even without an internet connection. This will involve setting up a local MinIO server and integrating it with the desktop client to manage media files effectively.
+
 ## User Management
 - [ ] User Authentication: Implement a secure login system.
 - [ ] User Profiles: Allow users to create and manage their profiles, including preferences and watch history.
