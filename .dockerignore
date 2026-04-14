@@ -9,6 +9,7 @@ postgres-data/
 # Python Virtual Environments
 .venv/
 .venv-test/
+venv/
 __pycache__/
 *.pyc
 
@@ -16,6 +17,18 @@ __pycache__/
 frontend/
 desktop/
 node_modules/
+
+# Build and local runtime artifacts
+build/
+app_data/
+*.egg-info/
+
+# Docs and assets not needed in backend image
+docs/
+icons/
+todo.md
+README.md
+docs.md
 
 # Mac/Windows clutter
 .DS_Store

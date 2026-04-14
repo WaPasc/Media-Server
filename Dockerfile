@@ -47,8 +47,10 @@ WORKDIR /app
 RUN mkdir -p /app/data /media && \
     chown -R appuser:appgroup /app /media
 
-# Copy the rest of the application code
-COPY --chown=appuser:appgroup . .
+# Copy only the runtime files needed by the backend service
+COPY --chown=appuser:appgroup src/ ./src/
+COPY --chown=appuser:appgroup pyproject.toml ./pyproject.toml
+COPY --chown=appuser:appgroup --chmod=755 entrypoint.sh ./entrypoint.sh
 
 # Tell Python exactly where the source code is
 ENV PYTHONPATH="/app/src"
@@ -58,9 +60,6 @@ USER appuser
 
 # Expose the port FastAPI runs on
 EXPOSE 8000
-
-# Make the entrypoint script executable
-RUN chmod +x entrypoint.sh
 
 # Start the application via the entrypoint script
 CMD ["./entrypoint.sh"]
