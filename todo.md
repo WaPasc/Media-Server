@@ -14,7 +14,6 @@
 
 ## Extras
 - [ ] Rating System: Implement a feature that allows users to rate movies and TV shows, and display average ratings on the frontend.
-- [ ] External Subtitle Support: Add support for external subtitle files (e.g., .srt) and ensure they are properly synced with the video playback.
 
 ## General Maintenance
 - [ ] Code Refactoring
