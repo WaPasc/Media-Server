@@ -16,6 +16,30 @@ services:
       retries: 10
     volumes:
       - ${POSTGRES_DATA_PATH}:/var/lib/postgresql/data
+
+  minio:
+    image: quay.io/minio/aistor/minio:latest
+    container_name: aistor-server
+    ports:
+      - "9000:9000" # API
+      - "9001:9001" # Console (Web UI) port
+    env_file:
+      - .env # Load MINIO_ROOT_USER and MINIO_ROOT_PASSWORD
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      # Data storage
+      - ${MINIO_PATH}/data:/mnt/data
+      # License file requirement
+      - ${MINIO_PATH}/minio.license:/minio.license
+      # Certs for TLS
+      - ${MINIO_PATH}/certs:/etc/minio/certs
+    command: >
+      minio server /mnt/data 
+      --console-address ":9001" 
+      --license /minio.license
+    restart: unless-stopped
   
   ms-backend:
     container_name: ms-backend
