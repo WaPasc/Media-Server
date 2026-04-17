@@ -21,7 +21,8 @@ dependencies = [
     "httpx",
     "parse-torrent-title",
     "ffmpeg-python",
-    "aiofiles"
+    "aiofiles",
+    "aioboto3"
 ]
 
 [tool.ruff]
