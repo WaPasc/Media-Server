@@ -38,12 +38,15 @@ Item {
                 let item = data[i];
                 let isMovie = item.type === "movie";
 
+                let parsedImage = isMovie ? (item.movie.backdrop_url || item.movie.poster_url || "") : (item.episode.still_url || item.show.backdrop_url || item.show.poster_url || "");
+                let parsedFallbackImage = isMovie ? (item.movie.backdrop_url_fallback || item.movie.poster_url_fallback || "") : (item.episode.still_url_fallback || item.show.backdrop_url_fallback || item.show.poster_url_fallback || "");
                 continueWatchingModel.append({
                     "type": item.type,
                     "mediaId": isMovie ? item.movie.id : item.show.id,
                     "title": isMovie ? item.movie.title : item.episode.title,
                     "showTitle": isMovie ? "" : item.show.title,
-                    "imageUrl": isMovie ? (item.movie.backdrop_url || item.movie.poster_url || "") : (item.episode.still_url || item.show.backdrop_url || item.show.poster_url || ""),
+                    "imageUrl": parsedImage,
+                    "imageFallbackUrl": parsedFallbackImage,
                     "progress": item.progress_percentage || 0.0,
                     "fileId": item.file_id
                 });
@@ -114,6 +117,7 @@ Item {
                     "mediaId": item.id,
                     "title": item.title,
                     "posterUrl": item.poster_url || "",
+                    "posterFallbackUrl": item.poster_url_fallback || "",
                     "fileId": item.file_id || 0,
                     "year": item.year ? item.year.toString() : "Unknown Year",
                     "isCompleted": item.is_completed || false,
@@ -278,6 +282,8 @@ Item {
                     height: 190
                     fileId: model.fileId
                     imageUrl: model.imageUrl
+                    fallbackUrl: model.imageFallbackUrl
+
                     mainTitle: model.type === "episode" ? model.showTitle : model.title
                     subTitle: model.type === "episode" ? model.title : (model.progress + "% Complete")
 
@@ -303,6 +309,7 @@ Item {
             title: model.title
             year: model.year
             posterUrl: model.posterUrl
+            fallbackUrl: model.posterFallbackUrl
             isAvailable: model.isAvailable
             isCompleted: model.isCompleted
             showCheckmark: currentMode === "movies"

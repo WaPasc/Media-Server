@@ -15,6 +15,7 @@ Item {
     property string movieTitle: ""
     property string movieYear: ""
     property string backdropUrl: ""
+    property string backdropFallbackUrl: ""
     property string overview: ""
     property int fileId: -1
 
@@ -34,6 +35,7 @@ Item {
             movieTitle = data.title || "";
             movieYear = data.year ? data.year.toString() : "Unknown Year";
             backdropUrl = data.backdrop_url || "";
+            backdropFallbackUrl = data.backdrop_url_fallback || "";
             overview = data.overview || "No overview available for this title.";
             fileId = data.file_id || -1;
         }).catch(function (error) {
@@ -58,6 +60,13 @@ Item {
                 fillMode: Image.PreserveAspectCrop
                 verticalAlignment: Image.AlignTop
                 opacity: 0.60
+
+                onStatusChanged: {
+                    if (status === Image.Error && source.toString() !== root.backdropFallbackUrl && root.backdropFallbackUrl !== "") {
+                        console.warn("MinIO load failed! Using TMDB fallback for Movie Backdrop: " + root.movieTitle);
+                        source = root.backdropFallbackUrl;
+                    }
+                }
             }
 
             // Vertical Fade

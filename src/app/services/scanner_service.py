@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from pathlib import Path
 from typing import Any
@@ -6,9 +7,11 @@ from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
+from app.core.constants import TMDB_BACKDROP_SIZE, TMDB_POSTER_SIZE, TMDB_STILL_SIZE
 from app.core.database import AsyncSessionLocal
 from app.models.media import Episode, MediaFile, Movie, ScanDirectory, Season, TVShow
 from app.models.user import UserShowProgress, WatchProgress  # noqa: F401
+from app.services.minio_service import ensure_image_in_minio
 from app.services.tmdb_client import TMDBClient
 from app.utils.datetime import get_brussels_time
 from app.utils.metadata import extract_local_info
@@ -58,7 +61,11 @@ def _build_show_cache_key(title_key: str, year: int | None) -> tuple[str, int | 
 
 
 async def _get_or_create_movie(
-    session: AsyncSession, tmdb: TMDBClient, parsed_title: str, local_year: int | None
+    session: AsyncSession,
+    tmdb: TMDBClient,
+    parsed_title: str,
+    local_year: int | None,
+    background_tasks: set,
 ) -> int | None:
     """Handles finding or creating the Movie record, including TMDB lookups."""
     search_results = await tmdb.search_movie(parsed_title)
@@ -94,10 +101,26 @@ async def _get_or_create_movie(
         session.add(movie)
         await session.flush()
 
+        if movie.poster_path:
+            task = asyncio.create_task(
+                ensure_image_in_minio(movie.poster_path, TMDB_POSTER_SIZE)
+            )
+            background_tasks.add(task)
+            task.add_done_callback(background_tasks.discard)
+
+        if movie.backdrop_path:
+            task = asyncio.create_task(
+                ensure_image_in_minio(movie.backdrop_path, TMDB_BACKDROP_SIZE)
+            )
+            background_tasks.add(task)
+            task.add_done_callback(background_tasks.discard)
+
     return movie.id
 
 
-async def process_movie_file(file_path: Path, session, tmdb: TMDBClient):
+async def process_movie_file(
+    file_path: Path, session, tmdb: TMDBClient, background_tasks: set
+):
     """Processes a single movie file, fetches TMDB data, and saves to DB."""
     abs_path = str(file_path.absolute())
 
@@ -120,7 +143,9 @@ async def process_movie_file(file_path: Path, session, tmdb: TMDBClient):
         return
 
     # 1. Get or Create the Parent Movie
-    movie_id = await _get_or_create_movie(session, tmdb, parsed_title, local_year)
+    movie_id = await _get_or_create_movie(
+        session, tmdb, parsed_title, local_year, background_tasks
+    )
     if not movie_id:
         return
 
@@ -137,7 +162,7 @@ async def process_movie_file(file_path: Path, session, tmdb: TMDBClient):
     logger.info(f'Successfully added: {parsed_title}')
 
 
-async def scan_movies_directory(movies_dir: str):
+async def scan_movies_directory(movies_dir: str, background_tasks: set):
     """Walks the movie directory and orchestrates the scanning."""
     root_path = Path(movies_dir)
 
@@ -154,7 +179,9 @@ async def scan_movies_directory(movies_dir: str):
                     and file_path.suffix.lower() in ALLOWED_EXTENSIONS
                 ):
                     try:
-                        await process_movie_file(file_path, session, tmdb)
+                        await process_movie_file(
+                            file_path, session, tmdb, background_tasks
+                        )
                     except Exception as e:
                         logger.error(f'Error processing {file_path.name}: {e}')
                         await session.rollback()  # Protect the database on failure
@@ -195,7 +222,12 @@ def _find_best_tmdb_match_show(
 
 
 async def _get_or_create_tv_show(
-    session, tmdb: TMDBClient, show_title: str, local_year: int | None, cache
+    session,
+    tmdb: TMDBClient,
+    show_title: str,
+    local_year: int | None,
+    cache,
+    background_tasks: set,
 ):
     """Handles finding or creating the TVShow record, including TMDB lookups."""
     shows_by_title = cache.setdefault('shows_by_title', {})
@@ -256,6 +288,20 @@ async def _get_or_create_tv_show(
         session.add(tv_show)
         await session.flush()
 
+        if tv_show.poster_path:
+            task = asyncio.create_task(
+                ensure_image_in_minio(tv_show.poster_path, TMDB_POSTER_SIZE)
+            )
+            background_tasks.add(task)
+            task.add_done_callback(background_tasks.discard)
+
+        if tv_show.backdrop_path:
+            task = asyncio.create_task(
+                ensure_image_in_minio(tv_show.backdrop_path, TMDB_BACKDROP_SIZE)
+            )
+            background_tasks.add(task)
+            task.add_done_callback(background_tasks.discard)
+
     show_id = tv_show.id
     show_tmdb_id = tv_show.tmdb_id
 
@@ -270,7 +316,13 @@ async def _get_or_create_tv_show(
 
 
 async def _get_or_create_season(
-    session, tmdb: TMDBClient, show_id, show_tmdb_id, season_number, cache
+    session,
+    tmdb: TMDBClient,
+    show_id,
+    show_tmdb_id,
+    season_number,
+    cache,
+    background_tasks: set,
 ):
     """Handles finding or creating a Season record."""
     seasons_by_key = cache.setdefault('seasons_by_key', {})
@@ -305,6 +357,13 @@ async def _get_or_create_season(
         session.add(season)
         await session.flush()
 
+        if season.poster_path:
+            task = asyncio.create_task(
+                ensure_image_in_minio(season.poster_path, TMDB_POSTER_SIZE)
+            )
+            background_tasks.add(task)
+            task.add_done_callback(background_tasks.discard)
+
     seasons_by_key[season_key] = season.id
     return season.id
 
@@ -317,6 +376,7 @@ async def _get_or_create_episode(
     season_number,
     episode_number,
     cache,
+    background_tasks: set,
 ):
     """Handles finding or creating an Episode record."""
     stmt = select(Episode).where(
@@ -365,11 +425,22 @@ async def _get_or_create_episode(
         session.add(episode)
         await session.flush()
 
+        if episode.still_path:
+            task = asyncio.create_task(
+                ensure_image_in_minio(episode.still_path, TMDB_STILL_SIZE)
+            )
+            background_tasks.add(task)
+            task.add_done_callback(background_tasks.discard)
+
     return episode.id
 
 
 async def process_tv_file(
-    file_path: Path, session, tmdb: TMDBClient, cache: dict[str, dict[Any, Any]]
+    file_path: Path,
+    session,
+    tmdb: TMDBClient,
+    cache: dict[str, dict[Any, Any]],
+    background_tasks: set,
 ):
     """Orchestrates the processing of a single TV episode file."""
     abs_path = str(file_path.absolute())
@@ -394,19 +465,26 @@ async def process_tv_file(
 
     # Get/Create Show
     show_id, show_tmdb_id = await _get_or_create_tv_show(
-        session, tmdb, show_title, local_year, cache
+        session, tmdb, show_title, local_year, cache, background_tasks
     )
     if not show_id:
         return
 
     # Get/Create Season
     season_id = await _get_or_create_season(
-        session, tmdb, show_id, show_tmdb_id, season_number, cache
+        session, tmdb, show_id, show_tmdb_id, season_number, cache, background_tasks
     )
 
     # Get/Create Episode (NEW CLEAN CALL)
     episode_id = await _get_or_create_episode(
-        session, tmdb, season_id, show_tmdb_id, season_number, episode_number, cache
+        session,
+        tmdb,
+        season_id,
+        show_tmdb_id,
+        season_number,
+        episode_number,
+        cache,
+        background_tasks,
     )
 
     # Link File
@@ -422,7 +500,7 @@ async def process_tv_file(
     logger.info(f'Added: {show_title} - S{season_number:02d}E{episode_number:02d}')
 
 
-async def scan_tv_shows_directory(tv_shows_dir: str):
+async def scan_tv_shows_directory(tv_shows_dir: str, background_tasks: set):
     """Walks the TV shows directory and orchestrates the scanning."""
     root_path = Path(tv_shows_dir)
 
@@ -442,7 +520,9 @@ async def scan_tv_shows_directory(tv_shows_dir: str):
                     and file_path.suffix.lower() in ALLOWED_EXTENSIONS
                 ):
                     try:
-                        await process_tv_file(file_path, session, tmdb, cache)
+                        await process_tv_file(
+                            file_path, session, tmdb, cache, background_tasks
+                        )
                     except Exception as e:
                         logger.error(f'Error processing {file_path.name}: {e}')
                         await session.rollback()
@@ -467,6 +547,8 @@ async def run_full_scan():
     """Reads all directories from the DB and scans them based on their type."""
     logger.info('Starting global background scan...')
 
+    active_downloads = set()
+
     async with AsyncSessionLocal() as session:
         stmt = select(ScanDirectory)
         result = await session.execute(stmt)
@@ -484,14 +566,20 @@ async def run_full_scan():
             )
 
             if directory.media_type == 'movies':
-                await scan_movies_directory(directory.path)
+                await scan_movies_directory(directory.path, active_downloads)
             elif directory.media_type == 'shows':
-                await scan_tv_shows_directory(directory.path)
+                await scan_tv_shows_directory(directory.path, active_downloads)
 
             # Update the last_scanned timestamp
             directory.last_scanned = get_brussels_time()
             session.add(directory)
             await session.commit()
+
+        if active_downloads:
+            logger.info(
+                f'Waiting for {len(active_downloads)} background image downloads to finish...'
+            )
+            await asyncio.gather(*active_downloads, return_exceptions=True)
 
         logger.info('--- Global Scan Complete ---')
 

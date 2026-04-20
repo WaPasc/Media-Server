@@ -1,8 +1,12 @@
+import asyncio
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
+from app.core.constants import TMDB_BACKDROP_SIZE, TMDB_POSTER_SIZE, TMDB_STILL_SIZE
 from app.models.media import Episode, MediaFile, Season, TVShow
+from app.services.minio_service import ensure_image_in_minio
 from app.services.tmdb_client import TMDBClient
 
 
@@ -82,4 +86,29 @@ async def refresh_show_metadata(db: AsyncSession, tmdb: TMDBClient, show_id: int
                 episode.still_path = ep_data.get('still_path', episode.still_path)
 
     await db.commit()
+
+    download_tasks = []
+
+    if show.poster_path:
+        download_tasks.append(ensure_image_in_minio(show.poster_path, TMDB_POSTER_SIZE))
+    if show.backdrop_path:
+        download_tasks.append(
+            ensure_image_in_minio(show.backdrop_path, TMDB_BACKDROP_SIZE)
+        )
+
+    for season in show.seasons:
+        if season.poster_path:
+            download_tasks.append(
+                ensure_image_in_minio(season.poster_path, TMDB_POSTER_SIZE)
+            )
+        for episode in season.episodes:
+            if episode.still_path:
+                download_tasks.append(
+                    ensure_image_in_minio(episode.still_path, TMDB_STILL_SIZE)
+                )
+
+    # Run them all concurrently, the Semaphore(10) in minio_service will protect us
+    if download_tasks:
+        await asyncio.gather(*download_tasks, return_exceptions=True)
+
     return show

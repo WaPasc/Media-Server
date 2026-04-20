@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+from app.core.s3 import s3_client
 from app.models.media import Movie
 from app.services.tmdb_client import TMDBClient
 
@@ -10,7 +11,9 @@ class MovieResponse(BaseModel):
     year: int | None = None
     overview: str | None = None
     poster_url: str | None = None
+    poster_url_fallback: str | None = None
     backdrop_url: str | None = None
+    backdrop_url_fallback: str | None = None
     file_id: int | None = None
     is_completed: bool | None = False
     is_available: bool | None = True
@@ -36,10 +39,16 @@ class MovieResponse(BaseModel):
             title=m.title,
             year=m.year,
             overview=m.overview,
-            poster_url=tmdb_client.get_poster_url(m.poster_path)
+            poster_url=s3_client.build_public_url(m.poster_path)
             if m.poster_path
             else None,
-            backdrop_url=tmdb_client.get_backdrop_url(m.backdrop_path)
+            poster_url_fallback=tmdb_client.get_poster_url(m.poster_path)
+            if m.poster_path
+            else None,
+            backdrop_url=s3_client.build_public_url(m.backdrop_path)
+            if m.backdrop_path
+            else None,
+            backdrop_url_fallback=tmdb_client.get_backdrop_url(m.backdrop_path)
             if m.backdrop_path
             else None,
             file_id=file_id,

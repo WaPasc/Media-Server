@@ -2,7 +2,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
+from app.core.constants import TMDB_BACKDROP_SIZE, TMDB_POSTER_SIZE
 from app.models.media import MediaFile, Movie
+from app.services.minio_service import ensure_image_in_minio
 from app.services.tmdb_client import TMDBClient
 
 
@@ -40,4 +42,10 @@ async def refresh_movie_metadata(db: AsyncSession, tmdb: TMDBClient, movie_id: i
     movie.backdrop_path = data.get('backdrop_path', movie.backdrop_path)
 
     await db.commit()
+
+    if movie.poster_path:
+        await ensure_image_in_minio(movie.poster_path, TMDB_POSTER_SIZE)
+    if movie.backdrop_path:
+        await ensure_image_in_minio(movie.backdrop_path, TMDB_BACKDROP_SIZE)
+
     return movie

@@ -36,10 +36,13 @@ Item {
 
                 // Prefer Episode Still -> Movie/Show Backdrop -> Poster
                 let parsedImage = "";
+                let parsedFallbackImage = "";
                 if (isMovie) {
                     parsedImage = item.movie.backdrop_url || item.movie.poster_url || "";
+                    parsedFallbackImage = item.movie.backdrop_url_fallback || item.movie.poster_url_fallback || "";
                 } else {
                     parsedImage = item.episode.still_url || item.show.backdrop_url || item.show.poster_url || "";
+                    parsedFallbackImage = item.episode.still_url_fallback || item.show.backdrop_url_fallback || item.show.poster_url_fallback || "";
                 }
 
                 historyModel.append({
@@ -47,6 +50,7 @@ Item {
                     "title": parsedTitle,
                     "showTitle": parsedShowTitle,
                     "imageUrl": parsedImage,
+                    "imageFallbackUrl": parsedFallbackImage,
                     "fileId": item.file_id,
                     // Optional: If you want to show when they watched it
                     "watchedDate": item.last_watched || "Previously Watched"
@@ -141,6 +145,8 @@ Item {
 
                 fileId: model.fileId
                 imageUrl: model.imageUrl
+                fallbackUrl: model.imageFallbackUrl
+
                 mainTitle: model.type === "episode" ? model.showTitle : model.title
                 subTitle: model.type === "episode" ? model.title : "Movie"
 

@@ -1,3 +1,4 @@
+from app.core.s3 import s3_client
 from app.models.user import WatchProgress
 from app.schemas.movies import MovieResponse
 from app.schemas.progress import (
@@ -49,7 +50,10 @@ def map_episode(
             title=episode.title,
             overview=episode.overview,
             file_id=media.id,
-            still_url=tmdb_client.get_still_url(episode.still_path)
+            still_url=s3_client.build_public_url(episode.still_path)
+            if episode.still_path
+            else None,
+            still_url_fallback=tmdb_client.get_still_url(episode.still_path)
             if episode.still_path
             else None,
         ),

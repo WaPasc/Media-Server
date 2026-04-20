@@ -10,6 +10,7 @@ Item {
     property string title: ""
     property string year: ""
     property string posterUrl: ""
+    property string fallbackUrl: ""
     property bool isAvailable: true
     property bool isCompleted: false
 
@@ -54,6 +55,13 @@ Item {
                 source: root.posterUrl
                 fillMode: Image.PreserveAspectCrop
                 visible: false
+
+                onStatusChanged: {
+                    if (status === Image.Error && source.toString() !== root.fallbackUrl && root.fallbackUrl !== "") {
+                        console.warn("MinIO load failed! Using TMDB fallback for: " + root.title);
+                        source = root.fallbackUrl;
+                    }
+                }
             }
 
             Item {

@@ -8,6 +8,7 @@ Item {
     // Properties
     property int fileId
     property string imageUrl: ""
+    property string fallbackUrl: ""
     property string mainTitle: ""
     property string subTitle: ""
 
@@ -53,9 +54,17 @@ Item {
                 layer.enabled: true
 
                 Image {
+                    id: thumbnailImage
                     anchors.fill: parent
                     source: root.imageUrl
                     fillMode: Image.PreserveAspectCrop
+
+                    onStatusChanged: {
+                        if (status === Image.Error && source.toString() !== root.fallbackUrl && root.fallbackUrl !== "") {
+                            console.warn("MinIO load failed! Using TMDB fallback for: " + root.mainTitle);
+                            source = root.fallbackUrl;
+                        }
+                    }
                 }
 
                 // Conditional Progress Bar Setup

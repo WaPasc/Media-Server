@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+from app.core.s3 import s3_client
 from app.models.media import TVShow
 from app.services.tmdb_client import TMDBClient
 
@@ -10,7 +11,9 @@ class ShowResponse(BaseModel):
     year: int | None = None
     overview: str | None = None
     poster_url: str | None = None
+    poster_url_fallback: str | None = None
     backdrop_url: str | None = None
+    backdrop_url_fallback: str | None = None
     is_available: bool | None = True
 
     @classmethod
@@ -20,10 +23,16 @@ class ShowResponse(BaseModel):
             title=s.title,
             year=s.year,
             overview=s.overview,
-            poster_url=tmdb_client.get_poster_url(s.poster_path)
+            poster_url=s3_client.build_public_url(s.poster_path)
             if s.poster_path
             else None,
-            backdrop_url=tmdb_client.get_backdrop_url(s.backdrop_path)
+            poster_url_fallback=tmdb_client.get_poster_url(s.poster_path)
+            if s.poster_path
+            else None,
+            backdrop_url=s3_client.build_public_url(s.backdrop_path)
+            if s.backdrop_path
+            else None,
+            backdrop_url_fallback=tmdb_client.get_backdrop_url(s.backdrop_path)
             if s.backdrop_path
             else None,
             is_available=s.is_available,
@@ -36,6 +45,7 @@ class EpisodeResponse(BaseModel):
     overview: str | None = None
     file_id: int | None = None
     still_url: str | None = None
+    still_url_fallback: str | None = None
     is_completed: bool | None = False
     is_available: bool | None = True
 
@@ -82,7 +92,10 @@ class ShowDetailResponse(ShowResponse):
                         title=ep.title,
                         overview=ep.overview,
                         file_id=file_id,
-                        still_url=tmdb_client.get_still_url(ep.still_path)
+                        still_url=s3_client.build_public_url(ep.still_path)
+                        if ep.still_path
+                        else None,
+                        still_url_fallback=tmdb_client.get_still_url(ep.still_path)
                         if ep.still_path
                         else None,
                         is_completed=completed,
@@ -101,10 +114,16 @@ class ShowDetailResponse(ShowResponse):
             title=s.title,
             year=s.year,
             overview=s.overview,
-            poster_url=tmdb_client.get_poster_url(s.poster_path)
+            poster_url=s3_client.build_public_url(s.poster_path)
             if s.poster_path
             else None,
-            backdrop_url=tmdb_client.get_backdrop_url(s.backdrop_path)
+            poster_url_fallback=tmdb_client.get_poster_url(s.poster_path)
+            if s.poster_path
+            else None,
+            backdrop_url=s3_client.build_public_url(s.backdrop_path)
+            if s.backdrop_path
+            else None,
+            backdrop_url_fallback=tmdb_client.get_backdrop_url(s.backdrop_path)
             if s.backdrop_path
             else None,
             seasons=seasons_data,

@@ -6,9 +6,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 S3_ENDPOINT = os.getenv('S3_ENDPOINT')
-S3_ACCESS_KEY = os.getenv('S3_ACCESS_KEY')
-S3_SECRET_KEY = os.getenv('S3_SECRET_KEY')
-S3_IMAGES_BUCKET = os.getenv('S3_IMAGES_BUCKET', 'tmdb-images')
+S3_ACCESS_KEY = os.getenv('MINIO_ROOT_USER')
+S3_SECRET_KEY = os.getenv('MINIO_ROOT_PASSWORD')
+S3_IMAGES_BUCKET = os.getenv('S3_IMAGES_BUCKET')
 S3_PUBLIC_BASE_URL = os.getenv('S3_PUBLIC_BASE_URL', S3_ENDPOINT)
 
 

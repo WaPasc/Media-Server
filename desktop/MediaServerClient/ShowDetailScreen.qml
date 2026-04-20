@@ -14,6 +14,7 @@ Item {
     property int showId: -1
     property string showTitle: ""
     property string backdropUrl: ""
+    property string backdropFallbackUrl: ""
     property string overview: ""
     property var rawShowData: null
     property int savedSeasonIndex: 0
@@ -43,6 +44,7 @@ Item {
             rawShowData = data;
             showTitle = rawShowData.title;
             backdropUrl = rawShowData.backdrop_url || "";
+            backdropFallbackUrl = rawShowData.backdrop_url_fallback || "";
             overview = rawShowData.overview || "No overview available for this show.";
 
             calculateNextEpisode();
@@ -88,6 +90,7 @@ Item {
                 "epOverview": ep.overview || "No description available.",
                 "fileId": ep.file_id || -1,
                 "stillUrl": ep.still_url || backdropUrl || "",
+                "stillFallbackUrl": ep.still_url_fallback || backdropFallbackUrl || "",
                 "isCompleted": ep.is_completed || false,
                 "isAvailable": ep.is_available !== undefined ? ep.is_available : true
             });
@@ -144,6 +147,13 @@ Item {
                 fillMode: Image.PreserveAspectCrop
                 verticalAlignment: Image.AlignTop // Pins the top of the image
                 opacity: 0.35
+
+                onStatusChanged: {
+                    if (status === Image.Error && source.toString() !== root.backdropFallbackUrl && root.backdropFallbackUrl !== "") {
+                        console.warn("MinIO load failed! Using TMDB fallback for Show Backdrop: " + root.showTitle);
+                        source = root.backdropFallbackUrl;
+                    }
+                }
             }
 
             // Vertical Fade (Hides the harsh bottom edge)
@@ -450,6 +460,13 @@ Item {
                                 source: model.stillUrl
                                 fillMode: Image.PreserveAspectCrop
                                 visible: false
+
+                                onStatusChanged: {
+                                    if (status === Image.Error && source.toString() !== model.stillFallbackUrl && model.stillFallbackUrl !== "") {
+                                        console.warn("MinIO load failed! Using TMDB fallback for Episode: " + model.epTitle);
+                                        source = model.stillFallbackUrl;
+                                    }
+                                }
                             }
 
                             // The Mask (hidden)
