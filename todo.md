@@ -2,7 +2,9 @@
 
 ## Offline Functionality
 -  [ ] Caching so desktop app feels snappy.
--  [ ] MinIO for local storage of media files, allowing users to access their media library even without an internet connection. This will involve setting up a local MinIO server and integrating it with the desktop client to manage media files effectively.
+
+## DevOps
+- [ ] Make sure the bucket is created on startup if it doesn't exist, to avoid issues with missing buckets when deploying to new environments. Also the anonymous user should be created if it doesn't exist, to avoid issues with permissions when deploying to new environments.
 
 ## User Management
 - [ ] User Authentication: Implement a secure login system.
