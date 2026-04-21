@@ -5,12 +5,18 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import history, movies, progress, scanner, shows, stream
+from app.core.s3 import s3_client
 from app.services.tmdb_client import TMDBClient
+from app.utils.s3_utils import apply_public_read_policy, ensure_bucket_exists
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.tmdb_client = await TMDBClient.create(timeout=10.0)
+
+    if s3_client.images_bucket:
+        await ensure_bucket_exists(s3_client.images_bucket)
+        await apply_public_read_policy(s3_client.images_bucket)
     try:
         yield
     finally:

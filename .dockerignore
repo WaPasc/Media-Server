@@ -33,3 +33,8 @@ docs.md
 # Mac/Windows clutter
 .DS_Store
 Thumbs.db
+
+# Testing
+tests/
+.pytest_cache/
+.coverage

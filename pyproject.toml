@@ -25,6 +25,12 @@ dependencies = [
     "aioboto3"
 ]
 
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-asyncio"
+]
+
 [tool.ruff]
 fix = true
 
