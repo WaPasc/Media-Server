@@ -13,6 +13,9 @@
 ## Desktop Client
 - [ ] Graphics API Update: Ensure the video player is not solely tied to legacy OpenGL and uses the modern Qt 6 rendering methods (RHI). See documentation: https://doc.qt.io/qt-6/opengl-changes-qt6.html
 
+## Web Application
+- [ ] Update the web application to use all the new features and improvements from the backend, ensuring a seamless user experience across both platforms.
+
 ## Deployment & Infrastructure
 - [ ] CI/CD Pipeline: Set up a continuous integration and deployment pipeline to automate testing and deployment processes.
 - [ ] Homelab Deployment: Deploy the application to a homelab environment, ensuring hardware acceleration is handled properly for each platform.
