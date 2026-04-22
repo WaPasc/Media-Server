@@ -27,7 +27,7 @@ async def test_apply_public_read_policy_sets_correct_statements():
 
     async with s3_client.get_client() as s3:
         try:
-            # await s3.create_bucket(Bucket=test_bucket)
+            await s3.create_bucket(Bucket=test_bucket)
             await apply_public_read_policy(test_bucket)
 
             policy_response = await s3.get_bucket_policy(Bucket=test_bucket)
