@@ -50,6 +50,9 @@ quote-style = "single"
 # Allow FastAPI Depends() as a default argument
 extend-immutable-calls = ["Depends", "fastapi.Depends"]
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
 [tool.alembic]
 script_location = "src/alembic"
 prepend_sys_path = ["."]

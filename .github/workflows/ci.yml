@@ -1,0 +1,68 @@
+name: CI
+
+# Workflow runs:
+# - On every push to main
+# - On every pull request targeting main
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Check out the code so the runner has access to it
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Install Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      # 3. Install the project + test dependencies
+      #    ".[test]" means: this package + the [test] extras from pyproject.toml
+      - name: Install dependencies
+        run: pip install -e ".[test]"
+
+      # 4. Start a real MinIO instance in the background.
+      #    We can't use a GitHub Actions "service container" for MinIO because
+      #    the image requires "server /data" as an explicit command, which
+      #    service containers don't support cleanly.
+      #    So we start it manually with docker run -d (detached / background).
+      - name: Start MinIO
+        run: |
+          docker run -d \
+            --name minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadmin \
+            minio/minio server /data
+
+      # 5. MinIO takes a second to be ready. Poll its health endpoint
+      #    until it responds, so tests don't start against a half-booted server.
+      - name: Wait for MinIO to be ready
+        run: |
+          for i in {1..15}; do
+            curl -sf http://localhost:9000/minio/health/live && echo "MinIO ready" && break
+            echo "Waiting for MinIO... ($i)"
+            sleep 2
+          done
+
+      # 6. Run the test suite.
+      #    PYTHONPATH=src makes "from app.xxx import ..." work without installing
+      #    the package in editable mode into a special path.
+      #    The env block passes the MinIO connection details the app reads via os.getenv().
+      - name: Run tests
+        env:
+          S3_ENDPOINT: http://localhost:9000
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadmin
+          S3_IMAGES_BUCKET: test-assets
+          S3_PUBLIC_BASE_URL: http://localhost:9000
+        run: PYTHONPATH=src pytest tests/ -v
