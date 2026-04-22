@@ -1,9 +1,12 @@
+import logging
 import os
 
 import httpx
 from dotenv import load_dotenv
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 
 class TMDBClient:
@@ -36,12 +39,15 @@ class TMDBClient:
         await instance._load_configuration()
         return instance
 
-    async def __aenter__(self):
+    async def ensure_configured(self):
         if self.config is None:
             await self._load_configuration()
+
+    async def __aenter__(self):
+        await self.ensure_configured()
         return self
 
-    async def __aexit__(self, exc_type, exc, tb):
+    async def __aexit__(self, *_):
         await self.close()
 
     async def close(self):
@@ -66,10 +72,15 @@ class TMDBClient:
         return await self._get('/configuration')
 
     async def _load_configuration(self):
-        self.config = await self._get_configuration()
-        self.image_base_url = self.config['images']['secure_base_url']
-        self.poster_sizes = self.config['images']['poster_sizes']
-        self.backdrop_sizes = self.config['images']['backdrop_sizes']
+        try:
+            self.config = await self._get_configuration()
+            self.image_base_url = self.config['images']['secure_base_url']
+            self.poster_sizes = self.config['images']['poster_sizes']
+            self.backdrop_sizes = self.config['images']['backdrop_sizes']
+        except (httpx.ConnectError, httpx.TimeoutException) as e:
+            logger.warning(
+                'Could not reach TMDB at startup (%s). Will retry on first use.', e
+            )
 
     # -----------------------------
     # Movies
@@ -134,12 +145,8 @@ class TMDBClient:
     # -----------------------------
 
     def build_image_url(self, path, size='w500'):
-        if not path:
+        if not path or not self.image_base_url:
             return None
-        if not self.image_base_url:
-            raise RuntimeError(
-                'TMDB configuration is not loaded. Use `await TMDBClient.create()` first.'
-            )
         return f'{self.image_base_url}{size}{path}'
 
     def get_poster_url(self, path, size='w342'):
