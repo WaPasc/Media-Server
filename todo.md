@@ -3,9 +3,6 @@
 ## Offline Functionality
 -  [ ] Caching so desktop app feels snappy.
 
-## DevOps
-- [ ] Make sure the bucket is created on startup if it doesn't exist, to avoid issues with missing buckets when deploying to new environments. Also the anonymous user should be created if it doesn't exist, to avoid issues with permissions when deploying to new environments.
-
 ## User Management
 - [ ] User Authentication: Implement a secure login system.
 - [ ] User Profiles: Allow users to create and manage their profiles, including preferences and watch history.
