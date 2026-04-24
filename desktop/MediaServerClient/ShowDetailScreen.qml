@@ -40,6 +40,14 @@ Item {
     }
 
     function loadShowDetails() {
+        showTitle = ""
+        backdropUrl = ""
+        backdropFallbackUrl = ""
+        overview = ""
+        rawShowData = null
+        seasonModel.clear()
+        episodeModel.clear()
+
         API.get("/api/show/" + showId).then(function (data) {
             rawShowData = data;
             showTitle = rawShowData.title;

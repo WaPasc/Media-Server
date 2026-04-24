@@ -31,6 +31,13 @@ Item {
     }
 
     function loadMovieDetails() {
+        movieTitle = ""
+        movieYear = ""
+        backdropUrl = ""
+        backdropFallbackUrl = ""
+        overview = ""
+        fileId = -1
+
         API.get("/api/movie/" + movieId).then(function (data) {
             movieTitle = data.title || "";
             movieYear = data.year ? data.year.toString() : "Unknown Year";
