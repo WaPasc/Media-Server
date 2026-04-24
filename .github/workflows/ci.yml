@@ -75,4 +75,6 @@ jobs:
           MINIO_ROOT_PASSWORD: minioadmin
           S3_IMAGES_BUCKET: test-assets
           S3_PUBLIC_BASE_URL: http://localhost:9000
+          # Replace with real Postgres service container when we add DB tests
+          POSTGRES_URL: postgresql://dummy:dummy@localhost/dummy
         run: PYTHONPATH=src pytest tests/ -v

@@ -10,6 +10,7 @@ echo "Spinning up ephemeral test container..."
 docker compose run -u root --rm \
   -v "./tests:/app/tests" \
   -v "./src:/app/src" \
+  -v "./pyproject.toml:/app/pyproject.toml" \
   ms-backend bash -c "
   echo 'Installing test dependencies dynamically...'
   /opt/venv/bin/python -m pip install -q pytest pytest-asyncio
