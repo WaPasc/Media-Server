@@ -28,7 +28,8 @@ dependencies = [
 [project.optional-dependencies]
 test = [
     "pytest",
-    "pytest-asyncio"
+    "pytest-asyncio",
+    "pytest-mock"
 ]
 
 [tool.ruff]

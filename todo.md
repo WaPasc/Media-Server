@@ -26,7 +26,7 @@
 ### No infrastructure needed (safe for CI)
 - [ ] **TMDB client - offline resilience**: verify `_load_configuration` catches `ConnectError`/`TimeoutException`, `config` stays `None`, and image URL methods return `None` instead of raising
 - [ ] **TMDB client - lazy retry**: verify `ensure_configured()` loads config successfully on a second attempt after an initial failure
-- [ ] **Scanner - filename parsing**: verify movie/show/episode metadata is correctly extracted from generic fake filenames (e.g. `"The.Matrix.1999.1080p.mkv"`, `"Breaking.Bad.S01E01.720p.mkv"`) using temp files
+
 
 ### Needs MinIO (already in CI)
 - [ ] **MinIO service - startup bucket creation**: verify `ensure_bucket_exists` + `apply_public_read_policy` are called correctly on lifespan startup

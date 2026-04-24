@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import PTN
 import pytest
@@ -142,9 +142,7 @@ class TestFindBestTmdbMatchShow:
             {'id': 1, 'name': 'Breaking Bad', 'first_air_date': '2008-01-01'},
             {'id': 2, 'name': 'Breaking Bad', 'first_air_date': '2020-01-01'},
         ]
-        match = _find_best_tmdb_match_show(
-            results, 'breaking bad', 2008, 'Breaking Bad'
-        )
+        match = _find_best_tmdb_match_show(results, 'breaking bad', 2008, 'Breaking Bad')
         assert match['id'] == 1
 
     def test_loose_match_when_no_year(self):
@@ -152,18 +150,14 @@ class TestFindBestTmdbMatchShow:
             {'id': 99, 'name': 'Some Other Show', 'first_air_date': '2010-01-01'},
             {'id': 1, 'name': 'Breaking Bad', 'first_air_date': '2008-01-01'},
         ]
-        match = _find_best_tmdb_match_show(
-            results, 'breaking bad', None, 'Breaking Bad'
-        )
+        match = _find_best_tmdb_match_show(results, 'breaking bad', None, 'Breaking Bad')
         assert match['id'] == 1
 
     def test_fallback_to_first_result(self):
         results = [
             {'id': 42, 'name': 'Something Unrelated', 'first_air_date': ''},
         ]
-        match = _find_best_tmdb_match_show(
-            results, 'breaking bad', 2008, 'Breaking Bad'
-        )
+        match = _find_best_tmdb_match_show(results, 'breaking bad', 2008, 'Breaking Bad')
         assert match['id'] == 42
 
 
@@ -173,105 +167,80 @@ class TestFindBestTmdbMatchShow:
 
 
 class TestExtractLocalInfo:
-    async def test_movie_filename(self, tmp_path):
+    async def test_movie_filename(self, tmp_path, mocker):
         fake_file = tmp_path / 'The.Matrix.1999.1080p.mkv'
         fake_file.touch()
+        mocker.patch('app.utils.metadata.get_file_technical_specs', new=AsyncMock(return_value=EMPTY_SPECS))
 
-        with patch(
-            'app.utils.metadata.get_file_technical_specs',
-            new=AsyncMock(return_value=EMPTY_SPECS),
-        ):
-            result = await extract_local_info(fake_file)
+        result = await extract_local_info(fake_file)
 
         assert result['title'] == 'The Matrix'
         assert result['year'] == 1999
         assert result['season'] == 0
         assert result['episode'] == 0
 
-    async def test_episode_filename(self, tmp_path):
+    async def test_episode_filename(self, tmp_path, mocker):
         fake_file = tmp_path / 'Breaking.Bad.S01E01.720p.mkv'
         fake_file.touch()
+        mocker.patch('app.utils.metadata.get_file_technical_specs', new=AsyncMock(return_value=EMPTY_SPECS))
 
-        with patch(
-            'app.utils.metadata.get_file_technical_specs',
-            new=AsyncMock(return_value=EMPTY_SPECS),
-        ):
-            result = await extract_local_info(fake_file)
+        result = await extract_local_info(fake_file)
 
         assert result['title'] == 'Breaking Bad'
         assert result['season'] == 1
         assert result['episode'] == 1
 
-    async def test_missing_video_stream_gives_no_resolution(self, tmp_path):
+    async def test_missing_video_stream_gives_no_resolution(self, tmp_path, mocker):
         fake_file = tmp_path / 'The.Matrix.1999.mkv'
         fake_file.touch()
+        mocker.patch('app.utils.metadata.get_file_technical_specs', new=AsyncMock(return_value=EMPTY_SPECS))
 
-        with patch(
-            'app.utils.metadata.get_file_technical_specs',
-            new=AsyncMock(return_value=EMPTY_SPECS),
-        ):
-            result = await extract_local_info(fake_file)
+        result = await extract_local_info(fake_file)
 
         assert result['resolution'] is None
         assert result['codec'] is None
 
-    @pytest.mark.parametrize(
-        'filename,expected_title,expected_season,expected_episode',
-        [
-            ('Suits.S01E01.720p.mkv', 'Suits', 1, 1),
-            ('Game.of.Thrones.S03E09.1080p.mkv', 'Game of Thrones', 3, 9),
-            ('The.100.S02E03.mkv', 'The 100', 2, 3),
-            ('Peaky.Blinders.S05E06.mkv', 'Peaky Blinders', 5, 6),
-            ('Breaking.Bad.S04E11.mkv', 'Breaking Bad', 4, 11),
-            ('The.Wire.S02E01.mkv', 'The Wire', 2, 1),
-            ('Stranger.Things.S03E04.mkv', 'Stranger Things', 3, 4),
-            ('House.of.Cards.S02E05.mkv', 'House of Cards', 2, 5),
-            ('Better.Call.Saul.S06E13.mkv', 'Better Call Saul', 6, 13),
-            ('The.Crown.S04E07.mkv', 'The Crown', 4, 7),
-        ],
-    )
-    async def test_show_filenames(
-        self, tmp_path, filename, expected_title, expected_season, expected_episode
-    ):
+    @pytest.mark.parametrize('filename,expected_title,expected_season,expected_episode', [
+        ('Suits.S01E01.720p.mkv',              'Suits',            1, 1),
+        ('Game.of.Thrones.S03E09.1080p.mkv',   'Game of Thrones',  3, 9),
+        ('The.100.S02E03.mkv',                 'The 100',          2, 3),
+        ('Peaky.Blinders.S05E06.mkv',          'Peaky Blinders',   5, 6),
+        ('Breaking.Bad.S04E11.mkv',            'Breaking Bad',     4, 11),
+        ('The.Wire.S02E01.mkv',                'The Wire',         2, 1),
+        ('Stranger.Things.S03E04.mkv',         'Stranger Things',  3, 4),
+        ('House.of.Cards.S02E05.mkv',          'House of Cards',   2, 5),
+        ('Better.Call.Saul.S06E13.mkv',        'Better Call Saul', 6, 13),
+        ('The.Crown.S04E07.mkv',               'The Crown',        4, 7),
+    ])
+    async def test_show_filenames(self, tmp_path, mocker, filename, expected_title, expected_season, expected_episode):
         fake_file = tmp_path / filename
         fake_file.touch()
+        mocker.patch('app.utils.metadata.get_file_technical_specs', new=AsyncMock(return_value=EMPTY_SPECS))
 
-        with patch(
-            'app.utils.metadata.get_file_technical_specs',
-            new=AsyncMock(return_value=EMPTY_SPECS),
-        ):
-            result = await extract_local_info(fake_file)
+        result = await extract_local_info(fake_file)
 
         assert result['title'] == expected_title
         assert result['season'] == expected_season
         assert result['episode'] == expected_episode
 
-    @pytest.mark.parametrize(
-        'filename,expected_title,expected_year',
-        [
-            ('Oppenheimer.2023.1080p.mkv', 'Oppenheimer', 2023),
-            ('War.Machine.2017.mkv', 'War Machine', 2017),
-            ('The.Dark.Knight.2008.BluRay.mkv', 'The Dark Knight', 2008),
-            ('Inception.2010.1080p.mkv', 'Inception', 2010),
-            ('Interstellar.2014.mkv', 'Interstellar', 2014),
-            ('The.Godfather.1972.mkv', 'The Godfather', 1972),
-            ('Pulp.Fiction.1994.mkv', 'Pulp Fiction', 1994),
-            ('The.Shawshank.Redemption.1994.mkv', 'The Shawshank Redemption', 1994),
-            ('Goodfellas.1990.mkv', 'Goodfellas', 1990),
-            ('Parasite.2019.mkv', 'Parasite', 2019),
-        ],
-    )
-    async def test_movie_filenames(
-        self, tmp_path, filename, expected_title, expected_year
-    ):
+    @pytest.mark.parametrize('filename,expected_title,expected_year', [
+        ('Oppenheimer.2023.1080p.mkv',            'Oppenheimer',              2023),
+        ('War.Machine.2017.mkv',                  'War Machine',              2017),
+        ('The.Dark.Knight.2008.BluRay.mkv',       'The Dark Knight',          2008),
+        ('Inception.2010.1080p.mkv',              'Inception',                2010),
+        ('Interstellar.2014.mkv',                 'Interstellar',             2014),
+        ('The.Godfather.1972.mkv',                'The Godfather',            1972),
+        ('Pulp.Fiction.1994.mkv',                 'Pulp Fiction',             1994),
+        ('The.Shawshank.Redemption.1994.mkv',     'The Shawshank Redemption', 1994),
+        ('Goodfellas.1990.mkv',                   'Goodfellas',               1990),
+        ('Parasite.2019.mkv',                     'Parasite',                 2019),
+    ])
+    async def test_movie_filenames(self, tmp_path, mocker, filename, expected_title, expected_year):
         fake_file = tmp_path / filename
         fake_file.touch()
+        mocker.patch('app.utils.metadata.get_file_technical_specs', new=AsyncMock(return_value=EMPTY_SPECS))
 
-        with patch(
-            'app.utils.metadata.get_file_technical_specs',
-            new=AsyncMock(return_value=EMPTY_SPECS),
-        ):
-            result = await extract_local_info(fake_file)
+        result = await extract_local_info(fake_file)
 
         assert result['title'] == expected_title
         assert result['year'] == expected_year

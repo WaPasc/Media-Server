@@ -13,7 +13,7 @@ docker compose run -u root --rm \
   -v "./pyproject.toml:/app/pyproject.toml" \
   ms-backend bash -c "
   echo 'Installing test dependencies dynamically...'
-  /opt/venv/bin/python -m pip install -q pytest pytest-asyncio
+  /opt/venv/bin/python -m pip install -q -e ".[test]"
   
   echo 'Running test suite...'
   PYTHONPATH=/app/src /opt/venv/bin/python -m pytest /app/tests/ -s -v
