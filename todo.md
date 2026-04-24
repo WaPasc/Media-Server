@@ -29,7 +29,6 @@
 - [ ] **Scanner - filename parsing**: verify movie/show/episode metadata is correctly extracted from generic fake filenames (e.g. `"The.Matrix.1999.1080p.mkv"`, `"Breaking.Bad.S01E01.720p.mkv"`) using temp files
 
 ### Needs MinIO (already in CI)
-- [ ] **S3 utils** ✅ covered (`test_s3_utils.py`)
 - [ ] **MinIO service - startup bucket creation**: verify `ensure_bucket_exists` + `apply_public_read_policy` are called correctly on lifespan startup
 
 ### Needs Postgres service container in CI
