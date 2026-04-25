@@ -4,7 +4,8 @@ project(MediaServerClient VERSION 0.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick)
+find_package(Qt6 REQUIRED COMPONENTS Quick Gui OpenGL)
+find_package(Qt6GuiPrivate REQUIRED)  # rhi/qrhi.h — QRhiTexture, QRhiGles2NativeHandles
 
 # Find mpv
 find_package(PkgConfig REQUIRED)
@@ -72,6 +73,8 @@ set_target_properties(appMediaServerClient PROPERTIES
 
 target_link_libraries(appMediaServerClient
     PRIVATE Qt6::Quick
+    PRIVATE Qt6::OpenGL        # QOpenGLContext, QOpenGLFunctions
+    PRIVATE Qt6::GuiPrivate    # rhi/qrhi.h — QRhiTexture, QRhiGles2NativeHandles
     PRIVATE ${MPV_LIBRARIES}
 )
 target_include_directories(appMediaServerClient PRIVATE ${MPV_INCLUDE_DIRS})

@@ -222,6 +222,16 @@ Item {
         }
     }
 
+    // Hides the scene graph's cached texture from the previous video while a
+    // new file is loading.  videoPlayer.videoReady is exposed by MpvItem and
+    // flips false on loadfile/stop, true on the first decoded frame.
+    Rectangle {
+        anchors.fill: videoPlayer
+        color: "black"
+        visible: !videoPlayer.videoReady
+        z: 1
+    }
+
     // NATIVE FILE PICKER FOR SUBTITLES
     FileDialog {
         id: subtitleFileDialog

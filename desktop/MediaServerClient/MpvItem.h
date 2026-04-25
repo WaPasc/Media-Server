@@ -1,58 +1,62 @@
 #pragma once
 
-#include <QtQuick/QQuickFramebufferObject>
+#include <QQuickRhiItem>
 #include <QVariantList>
 #include <QString>
 #include <mpv/client.h>
 #include <mpv/render_gl.h>
 
-// QQuickFramebufferObject for integrating OpenGL rendering using
-// a framebuffer object with Qt Quick
-class MpvItem : public QQuickFramebufferObject
+// QQuickRhiItem integrates custom rendering with Qt Quick's RHI scene graph.
+// It replaces the deprecated QQuickFramebufferObject (removed in Qt 6.7).
+// libmpv only exposes an OpenGL render API, so we still force OpenGL as the
+// RHI backend in main.cpp — the benefit here is using the correct Qt 6 class.
+class MpvItem : public QQuickRhiItem
 {
     Q_OBJECT
+    // Exposed to QML so a black overlay can hide the scene graph's cached
+    // texture (the previous video's last frame) during loading.
+    Q_PROPERTY(bool videoReady READ videoReady NOTIFY videoReadyChanged)
 
 public:
     explicit MpvItem(QQuickItem *parent = nullptr);
     ~MpvItem() override;
 
-    // Override Qt function, hands rendering off to background OpenGL thread
-    Renderer *createRenderer() const override;
+    // Called by Qt on the render thread to create the renderer object.
+    QQuickRhiItemRenderer *createRenderer() override;
 
-    // Q_INVOKABLE exposes cpp functions to frontend QML/js
+    bool videoReady() const { return m_videoReady; }
+
+    // Exposed to QML/JS via MpvVideo { id: player }
     Q_INVOKABLE void command(const QVariantList &params);
     Q_INVOKABLE void setProperty(const QString &name, const QVariant &value);
 
-// signals are to broadcast something
 signals:
-    // mpv decodes frames on its own background threads, it uses
-    // this signal to tell Qt GUI thread that there is a new frame
+    // Internal: mpv background thread -> Qt GUI thread redraw request.
     void onUpdate();
-    void ready(); // call when openGL canvast is built
 
+    // QML-facing: emitted when mpv reports a new playback position / duration.
     void timeChanged(double time);
     void durationChanged(double duration);
 
-// receiver for signals
-private slots:
-    // tells Qt to update the screen
-    void doUpdate();
+    void videoReadyChanged();
 
+private slots:
+    void doUpdate();
     void processMpvEvents();
 
 private:
-    mpv_handle *mpv;
-    mpv_render_context *mpv_gl;
+    mpv_handle         *m_mpv   = nullptr;
+    mpv_render_context *m_mpvGl = nullptr;
 
-    // static callback function that mpv can call from any thread
+    // Set false when a new file starts loading (MPV_EVENT_START_FILE).
+    // Set true on the first decoded frame (first time-pos property change).
+    // The renderer reads this via synchronize() to decide whether to clear
+    // the FBO to black, hiding the previous video's last frame during load.
+    bool m_videoReady = false;
+
     static void on_mpv_redraw(void *ctx);
-
     static void on_mpv_wakeup(void *ctx);
     void handleMpvEvent(mpv_event *event);
 
-    // MpvRenderer friend so the background render thread
-    // is allowed to acces our private mpv pointers.
     friend class MpvRenderer;
-
-
 };
