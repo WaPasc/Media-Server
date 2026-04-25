@@ -23,6 +23,24 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    # Postgres 17 service container, used by the admin export/restore
+    # round-trip integration test. The image must match the pg_dump client
+    # version we install below, otherwise pg_dump refuses to talk to it.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d ci_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       # 1. Check out the code so the runner has access to it
       - name: Checkout code
@@ -39,6 +57,19 @@ jobs:
       #    ".[test]" means: this package + the [test] extras from pyproject.toml
       - name: Install dependencies
         run: pip install -e ".[test]"
+
+      # 3b. Install postgresql-client-17 from the PGDG repo. The Ubuntu runner
+      #     ships an older client that refuses to dump from a 17 server.
+      - name: Install postgresql-client-17
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client-17
+          pg_dump --version
 
       # 4. Start a real MinIO instance in the background.
       #    We can't use a GitHub Actions "service container" for MinIO because
@@ -68,6 +99,9 @@ jobs:
       #    PYTHONPATH=src makes "from app.xxx import ..." work without installing
       #    the package in editable mode into a special path.
       #    The env block passes the MinIO connection details the app reads via os.getenv().
+      #    TEST_POSTGRES_URL gates the admin export/restore integration test so
+      #    it only runs in environments with a dedicated test DB, never against
+      #    a developer's real mediadb.
       - name: Run tests
         env:
           S3_ENDPOINT: http://localhost:9000
@@ -75,6 +109,6 @@ jobs:
           MINIO_ROOT_PASSWORD: minioadmin
           S3_IMAGES_BUCKET: test-assets
           S3_PUBLIC_BASE_URL: http://localhost:9000
-          # Replace with real Postgres service container when we add DB tests
-          POSTGRES_URL: postgresql://dummy:dummy@localhost/dummy
+          POSTGRES_URL: postgresql://ci:ci@localhost:5432/ci_test
+          TEST_POSTGRES_URL: postgresql://ci:ci@localhost:5432/ci_test
         run: PYTHONPATH=src pytest tests/ -v

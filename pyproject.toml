@@ -22,7 +22,8 @@ dependencies = [
     "parse-torrent-title",
     "ffmpeg-python",
     "aiofiles",
-    "aioboto3"
+    "aioboto3",
+    "python-multipart"
 ]
 
 [project.optional-dependencies]

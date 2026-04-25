@@ -4,7 +4,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import history, movies, progress, scanner, shows, stream
+from app.api.routes import admin, history, movies, progress, scanner, shows, stream
 from app.core.s3 import s3_client
 from app.services.tmdb_client import TMDBClient
 from app.utils.s3_utils import apply_public_read_policy, ensure_bucket_exists
@@ -39,6 +39,7 @@ app.include_router(stream.router)
 app.include_router(progress.router)
 app.include_router(scanner.router)
 app.include_router(history.router)
+app.include_router(admin.router)
 
 
 if __name__ == '__main__':

@@ -3,6 +3,20 @@
 ## User Management
 - [ ] User Authentication: Implement a secure login system.
 - [ ] User Profiles: Allow users to create and manage their profiles, including preferences and watch history.
+- [ ] Multi-user support: per-user history, progress, ratings.
+- [ ] Migration path: on first multi-user rollout, assign all existing accumulated data to current owner as the first user.
+- [ ] Per-user data export/import: a user can export their own progress/history/ratings and re-import after cloning the repo elsewhere.
+
+## Data Lifecycle & Backup
+- [ ] Decouple history/progress from media records so deleting/re-adding a file preserves accumulated state.
+- [ ] Restore-on-readd: when a previously removed show/movie reappears, automatically rebind history (watched episodes, progress, ratings, metadata).
+- [ ] Treat removed media distinctly in the DB (status flag beyond `is_available`) so UI can show "no longer in library" vs. "available".
+- [ ] Partial seasons: fetch full TMDB season metadata even if only some episodes exist on disk; render missing episodes as unavailable placeholders.
+
+## UI / Metadata
+- [ ] Show episode/movie runtime in detail screens.
+- [ ] Show cast and crew on detail screens.
+- [ ] Show external ratings (prefer IMDb; Rotten Tomatoes optional) on detail screens.
 
 ## Web Application
 - [ ] Update the web application to use all the new features and improvements from the backend, ensuring a seamless user experience across both platforms.
@@ -13,7 +27,8 @@
 - [ ] Cross-Platform Packaging: Ensure the desktop app is cross-platform compatible (Windows, macOS, Linux) and can be easily installed by users via native installers.
 
 ## Extras
-- [ ] Rating System: Implement a feature that allows users to rate movies and TV shows, and display average ratings on the frontend.
+- [ ] Rating System: per-user ratings on movies/shows/episodes for personal recall.
+- [ ] Discovery System: recommendation engine using TMDB (similar/recommendations/discover) driven by watch history, ratings, and a "more like this" entry point per title.
 
 ## Testing
 

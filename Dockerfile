@@ -26,10 +26,26 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # STAGE 2: Runner (Production Image)
 FROM python:3.12-slim 
 
-# Install runtime dependencies (PostgreSQL libs AND ffmpeg for media parsing)
+# Install runtime dependencies:
+#   - libpq5: psycopg client lib
+#   - ffmpeg: media transcoding/probing
+#   - postgresql-client-17: pg_dump / pg_restore for /api/admin export-restore.
+#     The Debian slim base only ships old client versions, so we add the PGDG
+#     repo to install a 17 client that matches the Postgres 17 server.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     ffmpeg \
+    ca-certificates \
+    curl \
+    gnupg \
+    && install -d /usr/share/postgresql-common/pgdg \
+    && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+        -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+    && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo $VERSION_CODENAME)-pgdg main" \
+        > /etc/apt/sources.list.d/pgdg.list \
+    && apt-get update && apt-get install -y --no-install-recommends \
+        postgresql-client-17 \
+    && apt-get purge -y --auto-remove curl gnupg \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the populated virtual environment from the builder stage
