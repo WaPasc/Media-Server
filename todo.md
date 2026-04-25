@@ -17,9 +17,6 @@
 
 ## Testing
 
-### Needs MinIO (already in CI)
-- [ ] **MinIO service - startup bucket creation**: verify `ensure_bucket_exists` + `apply_public_read_policy` are called correctly on lifespan startup
-
 ### Needs Postgres service container in CI
 - [ ] **Movie/show routes - happy path**: `GET /api/movies`, `GET /api/movie/{id}`, `GET /api/shows`, `GET /api/show/{id}` return correct shape with seeded data
 - [ ] **Streaming route - range requests**: verify `Content-Range` header and partial content (206) response for MP4 files
