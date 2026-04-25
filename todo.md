@@ -1,14 +1,8 @@
 # Todo List
 
-## Offline Functionality
--  [ ] Caching so desktop app feels snappy.
-
 ## User Management
 - [ ] User Authentication: Implement a secure login system.
 - [ ] User Profiles: Allow users to create and manage their profiles, including preferences and watch history.
-
-## Desktop Client
-- [ ] Graphics API Update: Ensure the video player is not solely tied to legacy OpenGL and uses the modern Qt 6 rendering methods (RHI). See documentation: https://doc.qt.io/qt-6/opengl-changes-qt6.html
 
 ## Web Application
 - [ ] Update the web application to use all the new features and improvements from the backend, ensuring a seamless user experience across both platforms.
@@ -22,11 +16,6 @@
 - [ ] Rating System: Implement a feature that allows users to rate movies and TV shows, and display average ratings on the frontend.
 
 ## Testing
-
-### No infrastructure needed (safe for CI)
-- [ ] **TMDB client - offline resilience**: verify `_load_configuration` catches `ConnectError`/`TimeoutException`, `config` stays `None`, and image URL methods return `None` instead of raising
-- [ ] **TMDB client - lazy retry**: verify `ensure_configured()` loads config successfully on a second attempt after an initial failure
-
 
 ### Needs MinIO (already in CI)
 - [ ] **MinIO service - startup bucket creation**: verify `ensure_bucket_exists` + `apply_public_read_policy` are called correctly on lifespan startup
