@@ -69,7 +69,9 @@ jobs:
             | sudo tee /etc/apt/sources.list.d/pgdg.list
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends postgresql-client-17
-          pg_dump --version
+          
+          # FORCE GitHub Actions to use the v17 binaries directly, bypassing pg_wrapper
+          echo "/usr/lib/postgresql/17/bin" >> $GITHUB_PATH
 
       # 4. Start a real MinIO instance in the background.
       #    We can't use a GitHub Actions "service container" for MinIO because
