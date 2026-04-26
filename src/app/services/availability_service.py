@@ -1,18 +1,27 @@
 import logging
 import os
 
+from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
-from app.models.media import Episode, MediaFile, Movie
+from app.models.media import Episode, MediaFile, Movie, Season, TVShow
 
 # Set up the logger
 logger = logging.getLogger(__name__)
 
 
+def _status_for(is_available: bool) -> str:
+    """Map a boolean availability to its catalog `library_status` value.
+
+    Kept as a single helper so the dual-write window between is_available and
+    library_status can't drift between call sites.
+    """
+    return 'present' if is_available else 'removed'
+
+
 async def _rollup_movie_availability(db: AsyncSession, movies_to_check: set[int]):
-    """Updates the is_available flag for movies based on their attached files."""
+    """Updates is_available + library_status for movies based on attached files."""
     if not movies_to_check:
         return
 
@@ -26,15 +35,20 @@ async def _rollup_movie_availability(db: AsyncSession, movies_to_check: set[int]
     for movie in movie_res.scalars().all():
         # A movie is available if any of its files are available
         movie.is_available = any(mf.is_available for mf in movie.files)
+        movie.library_status = _status_for(movie.is_available)
         db.add(movie)
 
     logger.info(f'Rolled up availability status for {len(movies_to_check)} movies.')
 
 
-async def _rollup_episode_availability(db: AsyncSession, episodes_to_check: set[int]):
-    """Updates the is_available flag for episodes based on their attached files."""
+async def _rollup_episode_availability(
+    db: AsyncSession, episodes_to_check: set[int]
+) -> set[int]:
+    """Updates is_available + library_status on episodes, and returns the set
+    of season IDs whose status may have changed.
+    """
     if not episodes_to_check:
-        return
+        return set()
 
     ep_stmt = (
         select(Episode)
@@ -43,17 +57,83 @@ async def _rollup_episode_availability(db: AsyncSession, episodes_to_check: set[
     )
     ep_res = await db.execute(ep_stmt)
 
+    seasons_to_check: set[int] = set()
     for ep in ep_res.scalars().all():
         ep.is_available = any(mf.is_available for mf in ep.files)
+        ep.library_status = _status_for(ep.is_available)
         db.add(ep)
+        seasons_to_check.add(ep.season_id)
 
     logger.info(f'Rolled up availability status for {len(episodes_to_check)} episodes.')
+    return seasons_to_check
+
+
+async def _rollup_season_status(
+    db: AsyncSession, seasons_to_check: set[int]
+) -> set[int]:
+    """Recomputes library_status for the given seasons using a single indexed
+    EXISTS query per season, and returns the set of show IDs whose status may
+    have changed.
+
+    Seasons have no is_available column today; they are status-only.
+    """
+    if not seasons_to_check:
+        return set()
+
+    season_stmt = select(Season).where(Season.id.in_(seasons_to_check))
+    season_res = await db.execute(season_stmt)
+
+    shows_to_check: set[int] = set()
+    for season in season_res.scalars().all():
+        # One indexed btree probe via ix_episodes_season_status.
+        any_present_stmt = select(
+            exists().where(
+                Episode.season_id == season.id,
+                Episode.library_status == 'present',
+            )
+        )
+        any_present = await db.scalar(any_present_stmt)
+        new_status = 'present' if any_present else 'removed'
+        if season.library_status != new_status:
+            season.library_status = new_status
+            db.add(season)
+            shows_to_check.add(season.show_id)
+
+    return shows_to_check
+
+
+async def _rollup_show_status(db: AsyncSession, shows_to_check: set[int]) -> None:
+    """Recomputes is_available + library_status for shows using a single
+    indexed EXISTS query per show against seasons.
+    """
+    if not shows_to_check:
+        return
+
+    show_stmt = select(TVShow).where(TVShow.id.in_(shows_to_check))
+    show_res = await db.execute(show_stmt)
+
+    for show in show_res.scalars().all():
+        # One indexed btree probe via ix_seasons_show_status.
+        any_present_stmt = select(
+            exists().where(
+                Season.show_id == show.id,
+                Season.library_status == 'present',
+            )
+        )
+        any_present = await db.scalar(any_present_stmt)
+        show.is_available = bool(any_present)
+        show.library_status = _status_for(show.is_available)
+        db.add(show)
+
+    logger.info(f'Rolled up availability status for {len(shows_to_check)} shows.')
 
 
 async def scan_library_availability(db: AsyncSession):
     """
     Checks if physical files still exist.
-    Updates the is_available flags WITHOUT deleting the records.
+    Updates is_available + library_status flags WITHOUT deleting the records.
+
+    Propagation order: MediaFile → Movie / Episode → Season → TVShow.
     """
     logger.info('Starting library availability scan...')
 
@@ -91,9 +171,20 @@ async def scan_library_availability(db: AsyncSession):
             if f.episode_id:
                 episodes_to_check.add(f.episode_id)
 
-    # Update the Parent Movies and Episodes
+    # Update parent Movies and Episodes
     await _rollup_movie_availability(db, movies_to_check)
-    await _rollup_episode_availability(db, episodes_to_check)
+    seasons_to_check = await _rollup_episode_availability(db, episodes_to_check)
+
+    # Flush so the EXISTS queries below see the just-updated episode statuses
+    # within the same transaction.
+    if seasons_to_check:
+        await db.flush()
+
+    # Propagate up: episodes → seasons → shows.
+    shows_to_check = await _rollup_season_status(db, seasons_to_check)
+    if shows_to_check:
+        await db.flush()
+    await _rollup_show_status(db, shows_to_check)
 
     # Commit all changes at once
     if files_marked_missing > 0 or files_marked_found > 0:

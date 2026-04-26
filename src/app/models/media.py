@@ -5,6 +5,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    Index,
     String,
     Text,
 )
@@ -15,6 +16,14 @@ from app.utils.datetime import get_brussels_time
 
 if TYPE_CHECKING:
     from app.models.user import WatchProgress
+
+# Catalog availability states. `present` = at least one playable file on disk.
+# `removed` = used to be in library, file is gone, watch state preserved.
+# `placeholder` = TMDB-known but no file yet (partial seasons, future use).
+LIBRARY_STATUS_VALUES = ('present', 'removed', 'placeholder')
+_LIBRARY_STATUS_CHECK = (
+    "library_status IN ('present', 'removed', 'placeholder')"
+)
 
 
 class MediaFile(Base):
@@ -54,6 +63,9 @@ class MediaFile(Base):
 
 class Movie(Base):
     __tablename__ = 'movies'
+    __table_args__ = (
+        CheckConstraint(_LIBRARY_STATUS_CHECK, name='chk_movies_library_status'),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     tmdb_id: Mapped[Optional[int]] = mapped_column(unique=True, index=True)
@@ -64,6 +76,9 @@ class Movie(Base):
     backdrop_path: Mapped[Optional[str]] = mapped_column(String(255))  # Horizontal
 
     is_available: Mapped[bool] = mapped_column(default=True, nullable=False)
+    library_status: Mapped[str] = mapped_column(
+        String(20), default='present', nullable=False, index=True
+    )
 
     # A single movie might have multiple files (e.g., 1080p and 4K versions)
     files: Mapped[List['MediaFile']] = relationship(
@@ -75,6 +90,12 @@ class Movie(Base):
 
 class Episode(Base):
     __tablename__ = 'episodes'
+    __table_args__ = (
+        CheckConstraint(_LIBRARY_STATUS_CHECK, name='chk_episodes_library_status'),
+        # Composite index drives the season-rollup EXISTS query: "any present
+        # episode in this season?". Single btree probe.
+        Index('ix_episodes_season_status', 'season_id', 'library_status'),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     season_id: Mapped[int] = mapped_column(
@@ -94,6 +115,9 @@ class Episode(Base):
     season: Mapped['Season'] = relationship(back_populates='episodes')
 
     is_available: Mapped[bool] = mapped_column(default=True, nullable=False)
+    library_status: Mapped[str] = mapped_column(
+        String(20), default='present', nullable=False
+    )
 
     # Links to the actual physical file
     files: Mapped[List['MediaFile']] = relationship(
@@ -105,6 +129,12 @@ class Episode(Base):
 
 class Season(Base):
     __tablename__ = 'seasons'
+    __table_args__ = (
+        CheckConstraint(_LIBRARY_STATUS_CHECK, name='chk_seasons_library_status'),
+        # Composite index drives the show-rollup EXISTS query: "any present
+        # season in this show?".
+        Index('ix_seasons_show_status', 'show_id', 'library_status'),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     show_id: Mapped[int] = mapped_column(
@@ -120,6 +150,10 @@ class Season(Base):
     # This is the main reason we need this table!
     poster_path: Mapped[Optional[str]] = mapped_column(String(255))
 
+    library_status: Mapped[str] = mapped_column(
+        String(20), default='present', nullable=False
+    )
+
     show: Mapped['TVShow'] = relationship(back_populates='seasons')
 
     # A season has many episodes
@@ -132,6 +166,9 @@ class Season(Base):
 
 class TVShow(Base):
     __tablename__ = 'tv_shows'
+    __table_args__ = (
+        CheckConstraint(_LIBRARY_STATUS_CHECK, name='chk_tv_shows_library_status'),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     tmdb_id: Mapped[Optional[int]] = mapped_column(unique=True, index=True)
@@ -142,6 +179,9 @@ class TVShow(Base):
     backdrop_path: Mapped[Optional[str]] = mapped_column(String(255))
 
     is_available: Mapped[bool] = mapped_column(default=True, nullable=False)
+    library_status: Mapped[str] = mapped_column(
+        String(20), default='present', nullable=False, index=True
+    )
 
     # A show has many seasons
     seasons: Mapped[List['Season']] = relationship(

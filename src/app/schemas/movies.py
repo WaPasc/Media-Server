@@ -17,6 +17,7 @@ class MovieResponse(BaseModel):
     file_id: int | None = None
     is_completed: bool | None = False
     is_available: bool | None = True
+    library_status: str | None = 'present'
 
     @classmethod
     def from_model(cls, m: Movie, tmdb_client: TMDBClient):
@@ -54,4 +55,5 @@ class MovieResponse(BaseModel):
             file_id=file_id,
             is_completed=completed,
             is_available=m.is_available,
+            library_status=m.library_status,
         )

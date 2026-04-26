@@ -15,6 +15,7 @@ class ShowResponse(BaseModel):
     backdrop_url: str | None = None
     backdrop_url_fallback: str | None = None
     is_available: bool | None = True
+    library_status: str | None = 'present'
 
     @classmethod
     def from_model(cls, s: TVShow, tmdb_client: TMDBClient):
@@ -36,6 +37,7 @@ class ShowResponse(BaseModel):
             if s.backdrop_path
             else None,
             is_available=s.is_available,
+            library_status=s.library_status,
         )
 
 
@@ -48,11 +50,13 @@ class EpisodeResponse(BaseModel):
     still_url_fallback: str | None = None
     is_completed: bool | None = False
     is_available: bool | None = True
+    library_status: str | None = 'present'
 
 
 class SeasonResponse(BaseModel):
     season_number: int
     episodes: list[EpisodeResponse]
+    library_status: str | None = 'present'
 
 
 class ShowDetailResponse(ShowResponse):
@@ -100,12 +104,15 @@ class ShowDetailResponse(ShowResponse):
                         else None,
                         is_completed=completed,
                         is_available=ep.is_available,
+                        library_status=ep.library_status,
                     )
                 )
 
             seasons_data.append(
                 SeasonResponse(
-                    season_number=season.season_number, episodes=episodes_data
+                    season_number=season.season_number,
+                    episodes=episodes_data,
+                    library_status=season.library_status,
                 )
             )
 
@@ -128,4 +135,5 @@ class ShowDetailResponse(ShowResponse):
             else None,
             seasons=seasons_data,
             is_available=s.is_available,
+            library_status=s.library_status,
         )
