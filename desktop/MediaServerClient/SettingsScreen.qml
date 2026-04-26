@@ -121,9 +121,11 @@ Rectangle {
                     }
 
                     Text {
-                        text: "Manually force the server to scan all directories for new media."
+                        text: "Scan all directories for new media. Use 'Check Availability' if you removed files from disk."
                         color: Theme.textSecondary
                         font.pixelSize: 14
+                        wrapMode: Text.WordWrap
+                        Layout.fillWidth: true
                     }
 
                     Button {
@@ -157,6 +159,39 @@ Rectangle {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
                             onClicked: triggerScan()
+                        }
+                    }
+
+                    Button {
+                        id: availabilityBtn
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 45
+
+                        contentItem: Text {
+                            text: "Check Availability (detect removed files)"
+                            color: Theme.textColor
+                            font.pixelSize: 14
+                            font.bold: true
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        background: Rectangle {
+                            color: availabilityBtn.hovered ? Theme.bgCardHover : Theme.bgBase
+                            border.color: availabilityBtn.hovered ? Theme.borderHover : Theme.borderMain
+                            border.width: 1
+                            radius: 8
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: 150
+                                }
+                            }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: triggerAvailabilityScan()
                         }
                     }
 
@@ -261,6 +296,20 @@ Rectangle {
         }).catch(function (error) {
             console.error("Failed to start scan:", error);
             scanStatusLabel.text = "Failed to start scan.";
+            scanStatusLabel.color = "#EF4444";
+        });
+    }
+
+    function triggerAvailabilityScan() {
+        scanStatusLabel.text = "Checking availability...";
+        scanStatusLabel.color = Theme.textMuted;
+
+        API.post("/api/scanner/scan-availability").then(function (data) {
+            scanStatusLabel.text = "Availability check started! Check backend logs.";
+            scanStatusLabel.color = "#10B981";
+        }).catch(function (error) {
+            console.error("Failed to start availability check:", error);
+            scanStatusLabel.text = "Failed to start availability check.";
             scanStatusLabel.color = "#EF4444";
         });
     }
