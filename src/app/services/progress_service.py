@@ -62,9 +62,15 @@ async def upsert_watch_progress(
         if is_finished:
             progress.has_ever_completed = True
     else:
+        # Resolve the catalog-side anchor (movie or episode) from the file so
+        # the row survives a future MediaFile deletion. Dual-write while
+        # media_file_id is still the source of truth for reads.
+        media_file = await db.get(MediaFile, data.file_id)
         progress = WatchProgress(
             user_id=user_id,
             media_file_id=data.file_id,
+            movie_id=media_file.movie_id if media_file else None,
+            episode_id=media_file.episode_id if media_file else None,
             stopped_at=data.current_time,
             is_completed=is_finished,
             has_ever_completed=is_finished,
