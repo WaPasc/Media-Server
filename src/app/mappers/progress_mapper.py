@@ -14,19 +14,18 @@ from app.utils.progress import calculate_progress_percentage
 
 def _pick_playable_file(files: list[MediaFile]) -> MediaFile | None:
     """First on-disk file, falling back to any file (so history entries for
-    removed items still serialise — file_id will just be None)."""
+    removed items still serialise, file_id will just be None)."""
     if not files:
         return None
     return next((f for f in files if f.is_available), None)
 
 
 def build_base(progress: WatchProgress, playable: MediaFile | None) -> dict:
-    duration = playable.duration if playable else None
     return dict(
         file_id=playable.id if playable else None,
         stopped_at=progress.stopped_at,
-        duration=duration,
-        progress_percentage=calculate_progress_percentage(progress.stopped_at, duration),
+        duration=playable.duration if playable else None,
+        progress_percentage=calculate_progress_percentage(progress),
         updated_at=progress.updated_at.isoformat(),
     )
 
