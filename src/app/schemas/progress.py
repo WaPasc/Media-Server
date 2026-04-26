@@ -23,7 +23,9 @@ class ProgressResponse(BaseModel):
 
 
 class ContinueWatchingBase(BaseModel):
-    file_id: int
+    # file_id is None when the catalog item has no playable file on disk
+    # (e.g., a history entry for a removed file).
+    file_id: int | None = None
     stopped_at: float
     duration: float | None = None
     progress_percentage: float

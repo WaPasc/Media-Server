@@ -1,4 +1,5 @@
 from app.core.s3 import s3_client
+from app.models.media import Episode, MediaFile, Movie
 from app.models.user import WatchProgress
 from app.schemas.movies import MovieResponse
 from app.schemas.progress import (
@@ -11,51 +12,57 @@ from app.services.tmdb_client import TMDBClient
 from app.utils.progress import calculate_progress_percentage
 
 
-def build_base(progress: WatchProgress) -> dict:
-    media = progress.media_file
+def _pick_playable_file(files: list[MediaFile]) -> MediaFile | None:
+    """First on-disk file, falling back to any file (so history entries for
+    removed items still serialise — file_id will just be None)."""
+    if not files:
+        return None
+    return next((f for f in files if f.is_available), None)
 
+
+def build_base(progress: WatchProgress, playable: MediaFile | None) -> dict:
+    duration = playable.duration if playable else None
     return dict(
-        file_id=media.id,
+        file_id=playable.id if playable else None,
         stopped_at=progress.stopped_at,
-        duration=media.duration,
-        progress_percentage=calculate_progress_percentage(progress),
+        duration=duration,
+        progress_percentage=calculate_progress_percentage(progress.stopped_at, duration),
         updated_at=progress.updated_at.isoformat(),
     )
 
 
 def map_movie(
-    progress: WatchProgress, tmdb_client: TMDBClient
+    progress: WatchProgress, movie: Movie, tmdb_client: TMDBClient
 ) -> ContinueWatchingMovie:
-    media = progress.media_file
-
+    playable = _pick_playable_file(movie.files)
     return ContinueWatchingMovie(
-        **build_base(progress),
-        movie=MovieResponse.from_model(media.movie, tmdb_client),
+        **build_base(progress, playable),
+        movie=MovieResponse.from_model(movie, tmdb_client),
     )
 
 
 def map_episode(
-    progress: WatchProgress, tmdb_client: TMDBClient
+    progress: WatchProgress, episode: Episode, tmdb_client: TMDBClient
 ) -> ContinueWatchingEpisode:
-    media = progress.media_file
-    episode = media.episode
+    playable = _pick_playable_file(episode.files)
     season = episode.season
     show = season.show
 
     return ContinueWatchingEpisode(
-        **build_base(progress),
+        **build_base(progress, playable),
         show=ShowResponse.from_model(show, tmdb_client),
         episode=EpisodeResponse(
             episode_number=episode.episode_number,
             title=episode.title,
             overview=episode.overview,
-            file_id=media.id,
+            file_id=playable.id if playable else None,
             still_url=s3_client.build_public_url(episode.still_path)
             if episode.still_path
             else None,
             still_url_fallback=tmdb_client.get_still_url(episode.still_path)
             if episode.still_path
             else None,
+            library_status=episode.library_status,
         ),
         season_number=season.season_number,
     )
@@ -64,15 +71,10 @@ def map_episode(
 def map_continue_watching(
     progress: WatchProgress, tmdb_client: TMDBClient
 ) -> ContinueWatchingItem | None:
-    media = progress.media_file
+    if progress.movie is not None:
+        return map_movie(progress, progress.movie, tmdb_client)
 
-    if not media:
-        return None
-
-    if media.movie:
-        return map_movie(progress, tmdb_client)
-
-    if media.episode:
-        return map_episode(progress, tmdb_client)
+    if progress.episode is not None:
+        return map_episode(progress, progress.episode, tmdb_client)
 
     return None

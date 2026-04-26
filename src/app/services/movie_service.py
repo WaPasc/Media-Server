@@ -3,7 +3,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
 from app.core.constants import TMDB_BACKDROP_SIZE, TMDB_POSTER_SIZE
-from app.models.media import MediaFile, Movie
+from app.models.media import Movie
 from app.services.minio_service import ensure_image_in_minio
 from app.services.tmdb_client import TMDBClient
 
@@ -11,7 +11,7 @@ from app.services.tmdb_client import TMDBClient
 async def get_all_movies(db: AsyncSession, skip: int = 0, limit: int = 50):
     stmt = (
         select(Movie)
-        .options(selectinload(Movie.files).selectinload(MediaFile.progress))
+        .options(selectinload(Movie.files), selectinload(Movie.progress))
         .offset(skip)
         .limit(limit)
     )
@@ -23,7 +23,7 @@ async def get_movie_by_id(db: AsyncSession, movie_id: int):
     stmt = (
         select(Movie)
         .where(Movie.id == movie_id)
-        .options(selectinload(Movie.files).selectinload(MediaFile.progress))
+        .options(selectinload(Movie.files), selectinload(Movie.progress))
     )
     result = await db.execute(stmt)
     return result.scalars().first()

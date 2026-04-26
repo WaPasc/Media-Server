@@ -100,7 +100,7 @@ Item {
                 "stillUrl": ep.still_url || backdropUrl || "",
                 "stillFallbackUrl": ep.still_url_fallback || backdropFallbackUrl || "",
                 "isCompleted": ep.is_completed || false,
-                "isAvailable": ep.is_available !== undefined ? ep.is_available : true
+                "libraryStatus": ep.library_status || "present"
             });
         }
     }
@@ -118,11 +118,11 @@ Item {
             for (let e = 0; e < eps.length; e++) {
                 let ep = eps[e];
 
-                // Parse availability
-                let epAvailable = ep.is_available !== undefined ? ep.is_available : true;
+                // Only "present" episodes are playable; 'removed' / 'placeholder' get skipped.
+                let epPresent = (ep.library_status || "present") === "present";
 
-                // Skip if completed, missing, or has no file attached
-                if (!ep.is_completed && epAvailable && ep.file_id !== null && ep.file_id !== -1) {
+                // Skip if completed, not playable, or has no file attached
+                if (!ep.is_completed && epPresent && ep.file_id !== null && ep.file_id !== -1) {
                     nextEpisode = {
                         seasonNum: season.season_number,
                         seasonIndex: s,
@@ -435,13 +435,16 @@ Item {
 
                     // FLATTENED EPISODE CARD
                     Rectangle {
+                        readonly property bool epPlayable: model.libraryStatus === "present"
+                        readonly property bool epPlaceholder: model.libraryStatus === "placeholder"
+
                         // Responsive logic: 1 col on small screens, 2 cols on large (minus the 16px gap)
                         width: episodeFlow.width < 900 ? episodeFlow.width : (episodeFlow.width - 16) / 2
                         height: 120
                         radius: 12
                         color: mouseArea.containsMouse ? Theme.bgCardHover : Theme.bgBlack
                         border.color: mouseArea.containsMouse ? Theme.accent : Theme.borderDark
-                        opacity: model.isAvailable ? 1.0 : 0.6
+                        opacity: epPlayable ? 1.0 : 0.6
 
                         // Thumbnail container (anchored flatly to the left)
                         Item {
@@ -500,26 +503,27 @@ Item {
                                 visible: model.stillUrl !== ""
                             }
 
-                            // MISSING FILE OVERLAY: Darken the thumbnail
+                            // OVERLAY: darken the thumbnail when not playable
                             Rectangle {
                                 anchors.fill: parent
                                 color: "black"
                                 radius: 8
                                 opacity: 0.65
-                                visible: !model.isAvailable
+                                visible: !epPlayable
                             }
 
-                            // MISSING FILE OVERLAY: The Red Video-Off Icon
+                            // OVERLAY: 'removed' shows the red missing icon,
+                            // 'placeholder' shows the placeholder icon.
                             Button {
                                 anchors.centerIn: parent
-                                icon.source: "missing.svg"
-                                icon.color: "red"
+                                icon.source: epPlaceholder ? "placeholder-media.svg" : "missing.svg"
+                                icon.color: epPlaceholder ? Theme.statusPending : "red"
                                 width: 36
                                 height: 36
                                 icon.width: 36
                                 icon.height: 36
                                 opacity: 0.8
-                                visible: !model.isAvailable
+                                visible: !epPlayable
                                 enabled: false
                                 background: Item {} // Removes button styling!
                             }
@@ -547,14 +551,14 @@ Item {
                                     font.bold: true
                                 }
                                 Rectangle {
-                                    visible: !model.isAvailable
+                                    visible: !epPlayable
                                     width: 80
                                     height: 18
                                     radius: 9
                                     color: Theme.bgBadge
                                     Text {
                                         anchors.centerIn: parent
-                                        text: "MISSING FILE"
+                                        text: epPlaceholder ? "COMING SOON" : "MISSING FILE"
                                         color: Theme.textTertiary
                                         font.pixelSize: 9
                                         font.bold: true
@@ -608,12 +612,12 @@ Item {
                             anchors.fill: parent
                             hoverEnabled: true
                             // Change to the red slash cursor
-                            cursorShape: model.isAvailable ? Qt.PointingHandCursor : Qt.ForbiddenCursor
+                            cursorShape: epPlayable ? Qt.PointingHandCursor : Qt.ForbiddenCursor
 
                             onClicked: {
-                                // Block the click if missing
-                                if (!model.isAvailable) {
-                                    console.log("Episode missing! Cannot open.");
+                                // Block the click for 'removed' or 'placeholder' episodes
+                                if (!epPlayable) {
+                                    console.log("Episode not playable (" + model.libraryStatus + "). Cannot open.");
                                     return;
                                 }
 

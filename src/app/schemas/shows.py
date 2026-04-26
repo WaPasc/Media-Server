@@ -14,7 +14,6 @@ class ShowResponse(BaseModel):
     poster_url_fallback: str | None = None
     backdrop_url: str | None = None
     backdrop_url_fallback: str | None = None
-    is_available: bool | None = True
     library_status: str | None = 'present'
 
     @classmethod
@@ -36,20 +35,18 @@ class ShowResponse(BaseModel):
             backdrop_url_fallback=tmdb_client.get_backdrop_url(s.backdrop_path)
             if s.backdrop_path
             else None,
-            is_available=s.is_available,
             library_status=s.library_status,
         )
 
 
 class EpisodeResponse(BaseModel):
     episode_number: int
-    title: str
+    title: str | None = None
     overview: str | None = None
     file_id: int | None = None
     still_url: str | None = None
     still_url_fallback: str | None = None
     is_completed: bool | None = False
-    is_available: bool | None = True
     library_status: str | None = 'present'
 
 
@@ -69,26 +66,13 @@ class ShowDetailResponse(ShowResponse):
         for season in s.seasons:
             episodes_data = []
             for ep in season.episodes:
-                # extract completion status
-                completed = False
-                file_id = None
-                if ep.files:
-                    # Pick a valid file for the video player
-                    preferred_file = next(
-                        (f for f in ep.files if f.is_available), ep.files[0]
-                    )
-                    if preferred_file.is_available:
-                        file_id = preferred_file.id
+                playable = next((f for f in ep.files if f.is_available), None)
+                file_id = playable.id if playable else None
 
-                    if preferred_file.progress:
-                        completed = next(
-                            (
-                                p.is_completed
-                                for p in preferred_file.progress
-                                if p.user_id == 1
-                            ),
-                            False,
-                        )
+                completed = next(
+                    (p.is_completed for p in ep.progress if p.user_id == 1),
+                    False,
+                )
 
                 episodes_data.append(
                     EpisodeResponse(
@@ -103,7 +87,6 @@ class ShowDetailResponse(ShowResponse):
                         if ep.still_path
                         else None,
                         is_completed=completed,
-                        is_available=ep.is_available,
                         library_status=ep.library_status,
                     )
                 )
@@ -134,6 +117,5 @@ class ShowDetailResponse(ShowResponse):
             if s.backdrop_path
             else None,
             seasons=seasons_data,
-            is_available=s.is_available,
             library_status=s.library_status,
         )

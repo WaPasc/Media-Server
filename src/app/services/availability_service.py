@@ -1,5 +1,6 @@
 import logging
 import os
+from typing import List
 
 from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,17 +12,17 @@ from app.models.media import Episode, MediaFile, Movie, Season, TVShow
 logger = logging.getLogger(__name__)
 
 
-def _status_for(is_available: bool) -> str:
-    """Map a boolean availability to its catalog `library_status` value.
-
-    Kept as a single helper so the dual-write window between is_available and
-    library_status can't drift between call sites.
+def _status_for_files(files: List[MediaFile]) -> str:
+    """Map a set of MediaFiles to a catalog `library_status` value: 'present'
+    if any file is on disk, 'removed' otherwise.
     """
-    return 'present' if is_available else 'removed'
+    return 'present' if any(mf.is_available for mf in files) else 'removed'
 
 
 async def _rollup_movie_availability(db: AsyncSession, movies_to_check: set[int]):
-    """Updates is_available + library_status for movies based on attached files."""
+    """Recomputes library_status for movies based on whether any attached
+    file is on disk.
+    """
     if not movies_to_check:
         return
 
@@ -33,9 +34,7 @@ async def _rollup_movie_availability(db: AsyncSession, movies_to_check: set[int]
     movie_res = await db.execute(movie_stmt)
 
     for movie in movie_res.scalars().all():
-        # A movie is available if any of its files are available
-        movie.is_available = any(mf.is_available for mf in movie.files)
-        movie.library_status = _status_for(movie.is_available)
+        movie.library_status = _status_for_files(movie.files)
         db.add(movie)
 
     logger.info(f'Rolled up availability status for {len(movies_to_check)} movies.')
@@ -44,8 +43,8 @@ async def _rollup_movie_availability(db: AsyncSession, movies_to_check: set[int]
 async def _rollup_episode_availability(
     db: AsyncSession, episodes_to_check: set[int]
 ) -> set[int]:
-    """Updates is_available + library_status on episodes, and returns the set
-    of season IDs whose status may have changed.
+    """Recomputes library_status on episodes, and returns the set of season
+    IDs whose status may have changed.
     """
     if not episodes_to_check:
         return set()
@@ -59,8 +58,7 @@ async def _rollup_episode_availability(
 
     seasons_to_check: set[int] = set()
     for ep in ep_res.scalars().all():
-        ep.is_available = any(mf.is_available for mf in ep.files)
-        ep.library_status = _status_for(ep.is_available)
+        ep.library_status = _status_for_files(ep.files)
         db.add(ep)
         seasons_to_check.add(ep.season_id)
 
@@ -74,8 +72,6 @@ async def _rollup_season_status(
     """Recomputes library_status for the given seasons using a single indexed
     EXISTS query per season, and returns the set of show IDs whose status may
     have changed.
-
-    Seasons have no is_available column today; they are status-only.
     """
     if not seasons_to_check:
         return set()
@@ -103,8 +99,8 @@ async def _rollup_season_status(
 
 
 async def _rollup_show_status(db: AsyncSession, shows_to_check: set[int]) -> None:
-    """Recomputes is_available + library_status for shows using a single
-    indexed EXISTS query per show against seasons.
+    """Recomputes library_status for shows using a single indexed EXISTS query
+    per show against seasons.
     """
     if not shows_to_check:
         return
@@ -121,9 +117,10 @@ async def _rollup_show_status(db: AsyncSession, shows_to_check: set[int]) -> Non
             )
         )
         any_present = await db.scalar(any_present_stmt)
-        show.is_available = bool(any_present)
-        show.library_status = _status_for(show.is_available)
-        db.add(show)
+        new_status = 'present' if any_present else 'removed'
+        if show.library_status != new_status:
+            show.library_status = new_status
+            db.add(show)
 
     logger.info(f'Rolled up availability status for {len(shows_to_check)} shows.')
 
@@ -131,7 +128,8 @@ async def _rollup_show_status(db: AsyncSession, shows_to_check: set[int]) -> Non
 async def scan_library_availability(db: AsyncSession):
     """
     Checks if physical files still exist.
-    Updates is_available + library_status flags WITHOUT deleting the records.
+    Updates MediaFile.is_available (file-on-disk flag) and propagates to
+    library_status on the catalog tables. Records are NOT deleted.
 
     Propagation order: MediaFile → Movie / Episode → Season → TVShow.
     """

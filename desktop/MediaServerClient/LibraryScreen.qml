@@ -121,7 +121,7 @@ Item {
                     "fileId": item.file_id || 0,
                     "year": item.year ? item.year.toString() : "Unknown Year",
                     "isCompleted": item.is_completed || false,
-                    "isAvailable": item.is_available !== undefined ? item.is_available : true // Add the new flag
+                    "libraryStatus": item.library_status || "present"
                 });
             }
         }
@@ -310,7 +310,7 @@ Item {
             year: model.year
             posterUrl: model.posterUrl
             fallbackUrl: model.posterFallbackUrl
-            isAvailable: model.isAvailable
+            libraryStatus: model.libraryStatus
             isCompleted: model.isCompleted
             showCheckmark: currentMode === "movies"
 

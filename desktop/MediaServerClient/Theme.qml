@@ -41,4 +41,8 @@ QtObject {
     readonly property color iconColor: "white"
     readonly property color iconHoverColor: "#aaaaaa"
     readonly property color progressToComplete: "#666666"
+
+    // Status accent for 'placeholder' / coming-soon catalog items.
+    // Amber distinguishes pending state from the red 'missing' state.
+    readonly property color statusPending: "#F59E0B"
 }

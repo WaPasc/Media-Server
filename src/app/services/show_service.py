@@ -5,7 +5,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
 from app.core.constants import TMDB_BACKDROP_SIZE, TMDB_POSTER_SIZE, TMDB_STILL_SIZE
-from app.models.media import Episode, MediaFile, Season, TVShow
+from app.models.media import Episode, Season, TVShow
 from app.services.minio_service import ensure_image_in_minio
 from app.services.tmdb_client import TMDBClient
 
@@ -27,8 +27,10 @@ async def get_show_by_id(db: AsyncSession, show_id: int) -> TVShow | None:
         .options(
             selectinload(TVShow.seasons)
             .selectinload(Season.episodes)
-            .selectinload(Episode.files)
-            .selectinload(MediaFile.progress)
+            .options(
+                selectinload(Episode.files),
+                selectinload(Episode.progress),
+            )
         )
     )
     result = await db.execute(stmt)

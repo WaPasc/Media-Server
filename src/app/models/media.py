@@ -56,9 +56,6 @@ class MediaFile(Base):
 
     movie: Mapped[Optional['Movie']] = relationship(back_populates='files')
     episode: Mapped[Optional['Episode']] = relationship(back_populates='files')
-    progress: Mapped[List['WatchProgress']] = relationship(
-        back_populates='media_file', cascade='all, delete-orphan'
-    )
 
 
 class Movie(Base):
@@ -75,13 +72,18 @@ class Movie(Base):
     poster_path: Mapped[Optional[str]] = mapped_column(String(255))  # Vertical
     backdrop_path: Mapped[Optional[str]] = mapped_column(String(255))  # Horizontal
 
-    is_available: Mapped[bool] = mapped_column(default=True, nullable=False)
     library_status: Mapped[str] = mapped_column(
         String(20), default='present', nullable=False, index=True
     )
 
     # A single movie might have multiple files (e.g., 1080p and 4K versions)
     files: Mapped[List['MediaFile']] = relationship(
+        back_populates='movie',
+        cascade='all, delete-orphan',
+        passive_deletes=True,
+    )
+
+    progress: Mapped[List['WatchProgress']] = relationship(
         back_populates='movie',
         cascade='all, delete-orphan',
         passive_deletes=True,
@@ -114,13 +116,18 @@ class Episode(Base):
 
     season: Mapped['Season'] = relationship(back_populates='episodes')
 
-    is_available: Mapped[bool] = mapped_column(default=True, nullable=False)
     library_status: Mapped[str] = mapped_column(
         String(20), default='present', nullable=False
     )
 
     # Links to the actual physical file
     files: Mapped[List['MediaFile']] = relationship(
+        back_populates='episode',
+        cascade='all, delete-orphan',
+        passive_deletes=True,
+    )
+
+    progress: Mapped[List['WatchProgress']] = relationship(
         back_populates='episode',
         cascade='all, delete-orphan',
         passive_deletes=True,
@@ -178,7 +185,6 @@ class TVShow(Base):
     poster_path: Mapped[Optional[str]] = mapped_column(String(255))
     backdrop_path: Mapped[Optional[str]] = mapped_column(String(255))
 
-    is_available: Mapped[bool] = mapped_column(default=True, nullable=False)
     library_status: Mapped[str] = mapped_column(
         String(20), default='present', nullable=False, index=True
     )

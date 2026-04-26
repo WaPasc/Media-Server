@@ -9,6 +9,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -16,7 +17,7 @@ from app.models.base import Base
 from app.utils.datetime import get_brussels_time
 
 if TYPE_CHECKING:
-    from app.models.media import Episode, MediaFile, Movie, Season, TVShow
+    from app.models.media import Episode, Movie, Season, TVShow
 
 
 class UserShowProgress(Base):
@@ -64,24 +65,28 @@ class WatchProgress(Base):
     __tablename__ = 'watch_progress'
 
     __table_args__ = (
-        # Original safety net: one progress row per (user, file). Stays during
-        # the dual-write transition, will be dropped in follow-up.
-        UniqueConstraint('user_id', 'media_file_id', name='uix_user_media_file'),
-        # Catalog-side identity: a progress row points at exactly one of
-        # movie_id / episode_id (mirrors media_files own check). NULLs are
-        # tolerated for the dual-write window where backfill ran but old code
-        # paths might still write only media_file_id; once those are gone the
-        # NULL branch is dropped in follow-up.
+        # A progress row points at exactly one of movie_id / episode_id.
         CheckConstraint(
             '(movie_id IS NULL AND episode_id IS NOT NULL) OR '
-            '(movie_id IS NOT NULL AND episode_id IS NULL) OR '
-            '(movie_id IS NULL AND episode_id IS NULL)',
+            '(movie_id IS NOT NULL AND episode_id IS NULL)',
             name='chk_watch_progress_catalog_target',
         ),
-        # Composite indexes for the future read path that filters by user +
-        # catalog item (follow-up will switch reads off media_file_id onto these).
-        Index('ix_watch_progress_user_movie', 'user_id', 'movie_id'),
-        Index('ix_watch_progress_user_episode', 'user_id', 'episode_id'),
+        # Partial uniques: one progress row per (user, catalog item). Each
+        # also serves as the read-path index for "user X's progress on item Y".
+        Index(
+            'uix_user_movie',
+            'user_id',
+            'movie_id',
+            unique=True,
+            postgresql_where=text('movie_id IS NOT NULL'),
+        ),
+        Index(
+            'uix_user_episode',
+            'user_id',
+            'episode_id',
+            unique=True,
+            postgresql_where=text('episode_id IS NOT NULL'),
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -90,11 +95,6 @@ class WatchProgress(Base):
         default=1, index=True
     )  # Hardcoded to 1 for MVP
 
-    media_file_id: Mapped[int] = mapped_column(
-        ForeignKey('media_files.id', ondelete='CASCADE'), index=True
-    )
-
-    # Catalog-side anchors. Nullable during dual-write; follow-up tightens this.
     movie_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey('movies.id', ondelete='CASCADE'), index=True
     )
@@ -113,6 +113,5 @@ class WatchProgress(Base):
         DateTime(timezone=True), default=get_brussels_time, onupdate=get_brussels_time
     )
 
-    media_file: Mapped['MediaFile'] = relationship(back_populates='progress')
-    movie: Mapped[Optional['Movie']] = relationship()
-    episode: Mapped[Optional['Episode']] = relationship()
+    movie: Mapped[Optional['Movie']] = relationship(back_populates='progress')
+    episode: Mapped[Optional['Episode']] = relationship(back_populates='progress')

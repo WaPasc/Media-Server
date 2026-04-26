@@ -1,13 +1,10 @@
-from app.models.user import WatchProgress
-
-
-def calculate_progress_percentage(progress: WatchProgress) -> float:
-    media = progress.media_file
-
-    if not media or not media.duration or media.duration <= 0:
+def calculate_progress_percentage(
+    stopped_at: float, duration: float | None
+) -> float:
+    if not duration or duration <= 0:
         return 0.0
 
-    return round((progress.stopped_at / media.duration) * 100, 2)
+    return round((stopped_at / duration) * 100, 2)
 
 
 def check_is_completed(

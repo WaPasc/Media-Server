@@ -11,11 +11,19 @@ Item {
     property string year: ""
     property string posterUrl: ""
     property string fallbackUrl: ""
-    property bool isAvailable: true
+    // Catalog availability state: 'present', 'removed', or 'placeholder'.
+    // 'present'     -> clickable, normal display.
+    // 'removed'     -> dimmed + missing icon, not clickable.
+    // 'placeholder' -> dimmed + placeholder icon, not clickable.
+    property string libraryStatus: "present"
     property bool isCompleted: false
 
     // Optional display properties
     property bool showCheckmark: false
+
+    readonly property bool isPlayable: libraryStatus === "present"
+    readonly property bool isRemoved: libraryStatus === "removed"
+    readonly property bool isPlaceholder: libraryStatus === "placeholder"
 
     // Signals emitted to the parent
     signal clicked(int id)
@@ -97,19 +105,19 @@ Item {
                 color: "black"
                 radius: 12
                 opacity: 0.65
-                visible: !root.isAvailable
+                visible: !root.isPlayable
             }
 
             Button {
                 anchors.centerIn: parent
-                icon.source: "missing.svg"
-                icon.color: "red"
+                icon.source: root.isPlaceholder ? "placeholder-media.svg" : "missing.svg"
+                icon.color: root.isPlaceholder ? Theme.statusPending : "red"
                 width: 48
                 height: 48
                 icon.width: 48
                 icon.height: 48
                 opacity: 0.8
-                visible: !root.isAvailable
+                visible: !root.isPlayable
                 enabled: false
                 background: Item {}
             }
@@ -170,11 +178,11 @@ Item {
         id: mouseArea
         anchors.fill: parent
         hoverEnabled: true
-        cursorShape: root.isAvailable ? Qt.PointingHandCursor : Qt.ForbiddenCursor
+        cursorShape: root.isPlayable ? Qt.PointingHandCursor : Qt.ForbiddenCursor
 
         onClicked: {
-            if (!root.isAvailable) {
-                console.log("Media missing! Cannot open.");
+            if (!root.isPlayable) {
+                console.log("Media not playable (" + root.libraryStatus + "). Cannot open.");
                 return;
             }
             root.clicked(root.mediaId);

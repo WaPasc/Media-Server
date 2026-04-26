@@ -16,25 +16,20 @@ class MovieResponse(BaseModel):
     backdrop_url_fallback: str | None = None
     file_id: int | None = None
     is_completed: bool | None = False
-    is_available: bool | None = True
     library_status: str | None = 'present'
 
     @classmethod
     def from_model(cls, m: Movie, tmdb_client: TMDBClient):
-        completed = False
-        file_id = None
-        if m.files:
-            # pick a valid file to send to the video player
-            preferred_file = next((f for f in m.files if f.is_available), m.files[0])
-            if preferred_file.is_available:
-                file_id = preferred_file.id
+        # Pick a file that's actually on disk so the player has something to
+        # stream. None is fine, Qt branches on library_status for UI.
+        playable = next((f for f in m.files if f.is_available), None)
+        file_id = playable.id if playable else None
 
-            if preferred_file.progress:
-                user_progress = next(
-                    (p for p in preferred_file.progress if p.user_id == 1),
-                    preferred_file.progress[0],
-                )
-                completed = user_progress.is_completed
+        completed = next(
+            (p.is_completed for p in m.progress if p.user_id == 1),
+            False,
+        )
+
         return cls(
             id=m.id,
             title=m.title,
@@ -54,6 +49,5 @@ class MovieResponse(BaseModel):
             else None,
             file_id=file_id,
             is_completed=completed,
-            is_available=m.is_available,
             library_status=m.library_status,
         )
