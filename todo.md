@@ -9,7 +9,6 @@
 
 ## Data Lifecycle & Backup
 - [ ] Restore-on-readd: when a previously removed show/movie reappears, automatically rebind history (watched episodes, progress, ratings, metadata). *(Foundation now in place — WatchProgress anchors on Movie/Episode, so re-adding a file naturally rebinds. Still need: scanner-side reconciliation pass + UI affordance.)*
-- [ ] Fold availability check into `run_full_scan` so `/scan` flips `MediaFile.is_available` and rolls up `library_status` in one pass.
 - [ ] Grace-period for offline disks: `MediaFile.deleted_at` + scheduled cleanup (e.g. 14 days) before flipping to removed.
 
 ## UI / Metadata
