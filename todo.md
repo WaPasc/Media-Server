@@ -8,10 +8,9 @@
 - [ ] Per-user data export/import: a user can export their own progress/history/ratings and re-import after cloning the repo elsewhere.
 
 ## Data Lifecycle & Backup
-- [ ] Decouple history/progress from media records so deleting/re-adding a file preserves accumulated state.
-- [ ] Restore-on-readd: when a previously removed show/movie reappears, automatically rebind history (watched episodes, progress, ratings, metadata).
-- [ ] Treat removed media distinctly in the DB (status flag beyond `is_available`) so UI can show "no longer in library" vs. "available".
-- [ ] Partial seasons: fetch full TMDB season metadata even if only some episodes exist on disk; render missing episodes as unavailable placeholders.
+- [ ] Restore-on-readd: when a previously removed show/movie reappears, automatically rebind history (watched episodes, progress, ratings, metadata). *(Foundation now in place — WatchProgress anchors on Movie/Episode, so re-adding a file naturally rebinds. Still need: scanner-side reconciliation pass + UI affordance.)*
+- [ ] Fold availability check into `run_full_scan` so `/scan` flips `MediaFile.is_available` and rolls up `library_status` in one pass.
+- [ ] Grace-period for offline disks: `MediaFile.deleted_at` + scheduled cleanup (e.g. 14 days) before flipping to removed.
 
 ## UI / Metadata
 - [ ] Show episode/movie runtime in detail screens.
