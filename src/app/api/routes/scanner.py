@@ -8,7 +8,6 @@ from app.schemas.scanner import (
     ScanDirectoryResponse,
 )
 from app.services import scanner_service
-from app.services.availability_service import scan_library_availability
 
 router = APIRouter(prefix='/api/scanner', tags=['scanner'])
 
@@ -45,26 +44,27 @@ async def add_directory(
 
 @router.post('/scan')
 async def trigger_scan(background_tasks: BackgroundTasks):
-    """Trigger a full library scan in the background."""
+    """Trigger a full library scan in the background.
+
+    Adds new files, restores files that reappeared on disk, and flips
+    vanished files to is_available=False. Catalog library_status is
+    rolled up at the end of the scan.
+    """
     background_tasks.add_task(scanner_service.run_full_scan)
     return {
         'message': 'Scan started in the background. Check server logs for progress.'
     }
 
 
-@router.post('/scan-availability')
-async def trigger_availability_check(
-    background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)
-):
-    """
-    Scans the library to ensure files still exist.
-    Flags missing files as unavailable instead of deleting them.
-    """
+@router.post('/scan-availability', response_model=ScanAvailabilityResponse)
+async def trigger_availability_scan(background_tasks: BackgroundTasks):
+    """Quick on-disk presence sweep without TMDB calls or new-file ingestion.
 
-    # We pass this to FastAPI's background tasks so the API returns instantly,
-    # and the scan happens behind the scenes
-    background_tasks.add_task(scan_library_availability, db)
-
+    Reconciles MediaFile.is_available for every monitored directory and rolls
+    up library_status. Use this after a drive unmount/remount when you don't
+    need to look for new files. For full ingestion use POST /api/scanner/scan.
+    """
+    background_tasks.add_task(scanner_service.run_availability_scan)
     return ScanAvailabilityResponse(
         status='success', message='Availability check started in the background.'
     )

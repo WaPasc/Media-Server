@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +12,12 @@ from app.core.constants import TMDB_BACKDROP_SIZE, TMDB_POSTER_SIZE, TMDB_STILL_
 from app.core.database import AsyncSessionLocal
 from app.models.media import Episode, MediaFile, Movie, ScanDirectory, Season, TVShow
 from app.models.user import UserShowProgress, WatchProgress  # noqa: F401
+from app.services.availability_service import (
+    _rollup_episode_availability,
+    _rollup_movie_availability,
+    _rollup_season_status,
+    _rollup_show_status,
+)
 from app.services.minio_service import ensure_image_in_minio
 from app.services.tmdb_client import TMDBClient
 from app.utils.datetime import get_brussels_time
@@ -120,17 +127,12 @@ async def _get_or_create_movie(
 
 async def process_movie_file(
     file_path: Path, session, tmdb: TMDBClient, background_tasks: set
-):
-    """Processes a single movie file, fetches TMDB data, and saves to DB."""
+) -> int | None:
+    """Adds a new MediaFile row for a movie file. Returns the parent
+    movie_id (so the caller can roll up library_status), or None if the file
+    could not be matched.
+    """
     abs_path = str(file_path.absolute())
-
-    # Skip if already in database
-    stmt = select(MediaFile).where(MediaFile.file_path == abs_path)
-    result = await session.execute(stmt)
-    if result.scalars().first():
-        logger.info(f'Skipping (already scanned): {file_path.name}')
-        return
-
     logger.info(f'Scanning new movie: {file_path.name}')
 
     # Extract local technical info
@@ -140,16 +142,14 @@ async def process_movie_file(
 
     if not parsed_title or parsed_title == 'Unknown':
         logger.warning(f'Could not parse title from filename: {file_path.name}')
-        return
+        return None
 
-    # 1. Get or Create the Parent Movie
     movie_id = await _get_or_create_movie(
         session, tmdb, parsed_title, local_year, background_tasks
     )
     if not movie_id:
-        return
+        return None
 
-    # 2. Link the physical MediaFile
     media_file = MediaFile(
         file_path=abs_path,
         duration=local_info.get('duration'),
@@ -160,31 +160,93 @@ async def process_movie_file(
     session.add(media_file)
     await session.commit()
     logger.info(f'Successfully added: {parsed_title}')
+    return movie_id
 
 
-async def scan_movies_directory(movies_dir: str, background_tasks: set):
-    """Walks the movie directory and orchestrates the scanning."""
+async def _existing_files_under(
+    session: AsyncSession, abs_root: str, *, movies: bool
+) -> dict[str, MediaFile]:
+    """Pre-load all MediaFile rows whose file_path lives under abs_root,
+    keyed by file_path. `movies=True` filters to movie files; otherwise
+    episode files. autoescape=True so '_' / '%' in paths are treated literally.
+    """
+    prefix = abs_root + os.sep
+    stmt = select(MediaFile).where(
+        MediaFile.file_path.startswith(prefix, autoescape=True)
+    )
+    if movies:
+        stmt = stmt.where(MediaFile.movie_id.is_not(None))
+    else:
+        stmt = stmt.where(MediaFile.episode_id.is_not(None))
+
+    result = await session.execute(stmt)
+    return {mf.file_path: mf for mf in result.scalars().all()}
+
+
+async def scan_movies_directory(movies_dir: str, background_tasks: set) -> set[int]:
+    """Walks a movies directory: adds new files, restores files that
+    reappeared, and flips files that vanished to is_available=False.
+
+    Returns the set of movie IDs whose file availability changed (caller
+    will roll those up to library_status).
+    """
     root_path = Path(movies_dir)
 
     if not root_path.exists() or not root_path.is_dir():
         logger.error(f'Directory not found: {movies_dir}')
-        return
+        return set()
 
-    # Use the async context managers we built!
+    abs_root = str(root_path.absolute())
+    movies_changed: set[int] = set()
+
     async with TMDBClient() as tmdb:
         async with AsyncSessionLocal() as session:
+            existing = await _existing_files_under(session, abs_root, movies=True)
+            seen_paths: set[str] = set()
+
             for file_path in root_path.rglob('*'):
-                if (
+                if not (
                     file_path.is_file()
                     and file_path.suffix.lower() in ALLOWED_EXTENSIONS
                 ):
-                    try:
-                        await process_movie_file(
-                            file_path, session, tmdb, background_tasks
-                        )
-                    except Exception as e:
-                        logger.error(f'Error processing {file_path.name}: {e}')
-                        await session.rollback()  # Protect the database on failure
+                    continue
+
+                abs_path = str(file_path.absolute())
+                seen_paths.add(abs_path)
+
+                known = existing.get(abs_path)
+                if known is not None:
+                    if not known.is_available:
+                        known.is_available = True
+                        session.add(known)
+                        if known.movie_id is not None:
+                            movies_changed.add(known.movie_id)
+                        logger.info(f'File restored: {abs_path}')
+                    continue
+
+                try:
+                    created_movie_id = await process_movie_file(
+                        file_path, session, tmdb, background_tasks
+                    )
+                    if created_movie_id is not None:
+                        movies_changed.add(created_movie_id)
+                except Exception as e:
+                    logger.error(f'Error processing {file_path.name}: {e}')
+                    await session.rollback()
+
+            for path, mf in existing.items():
+                if path in seen_paths:
+                    continue
+                if mf.is_available:
+                    mf.is_available = False
+                    session.add(mf)
+                    if mf.movie_id is not None:
+                        movies_changed.add(mf.movie_id)
+                    logger.warning(f'File missing: {path}')
+
+            await session.commit()
+
+    return movies_changed
 
 
 def _find_best_tmdb_match_show(
@@ -441,16 +503,11 @@ async def process_tv_file(
     tmdb: TMDBClient,
     cache: dict[str, dict[Any, Any]],
     background_tasks: set,
-):
-    """Orchestrates the processing of a single TV episode file."""
+) -> int | None:
+    """Adds a new MediaFile row for an episode file. Returns the parent
+    episode_id, or None if the file could not be matched.
+    """
     abs_path = str(file_path.absolute())
-
-    # Skip if already in db
-    stmt = select(MediaFile).where(MediaFile.file_path == abs_path)
-    result = await session.execute(stmt)
-    if result.scalars().first():
-        logger.info(f'Skipping (already scanned): {file_path.name}')
-        return
 
     # Extract metadata
     local_info = await extract_local_info(Path(abs_path))
@@ -461,21 +518,21 @@ async def process_tv_file(
 
     if not show_title or season_number is None or episode_number is None:
         logger.warning(f'Could not parse S/E from filename: {file_path.name}')
-        return
+        return None
 
     # Get/Create Show
     show_id, show_tmdb_id = await _get_or_create_tv_show(
         session, tmdb, show_title, local_year, cache, background_tasks
     )
     if not show_id:
-        return
+        return None
 
     # Get/Create Season
     season_id = await _get_or_create_season(
         session, tmdb, show_id, show_tmdb_id, season_number, cache, background_tasks
     )
 
-    # Get/Create Episode (NEW CLEAN CALL)
+    # Get/Create Episode
     episode_id = await _get_or_create_episode(
         session,
         tmdb,
@@ -487,7 +544,6 @@ async def process_tv_file(
         background_tasks,
     )
 
-    # Link File
     media_file = MediaFile(
         file_path=abs_path,
         duration=local_info.get('duration'),
@@ -498,15 +554,23 @@ async def process_tv_file(
     session.add(media_file)
     await session.commit()
     logger.info(f'Added: {show_title} - S{season_number:02d}E{episode_number:02d}')
+    return episode_id
 
 
-async def scan_tv_shows_directory(tv_shows_dir: str, background_tasks: set):
-    """Walks the TV shows directory and orchestrates the scanning."""
+async def scan_tv_shows_directory(tv_shows_dir: str, background_tasks: set) -> set[int]:
+    """Walks a TV shows directory: adds new episode files, restores files
+    that reappeared, and flips files that vanished to is_available=False.
+
+    Returns the set of episode IDs whose file availability changed.
+    """
     root_path = Path(tv_shows_dir)
 
     if not root_path.exists() or not root_path.is_dir():
         logger.error(f'Directory not found: {tv_shows_dir}')
-        return
+        return set()
+
+    abs_root = str(root_path.absolute())
+    episodes_changed: set[int] = set()
 
     async with TMDBClient() as tmdb:
         async with AsyncSessionLocal() as session:
@@ -514,18 +578,53 @@ async def scan_tv_shows_directory(tv_shows_dir: str, background_tasks: set):
                 'shows_by_title': {},
                 'seasons_by_key': {},
             }
+
+            existing = await _existing_files_under(session, abs_root, movies=False)
+            seen_paths: set[str] = set()
+
             for file_path in root_path.rglob('*'):
-                if (
+                if not (
                     file_path.is_file()
                     and file_path.suffix.lower() in ALLOWED_EXTENSIONS
                 ):
-                    try:
-                        await process_tv_file(
-                            file_path, session, tmdb, cache, background_tasks
-                        )
-                    except Exception as e:
-                        logger.error(f'Error processing {file_path.name}: {e}')
-                        await session.rollback()
+                    continue
+
+                abs_path = str(file_path.absolute())
+                seen_paths.add(abs_path)
+
+                known = existing.get(abs_path)
+                if known is not None:
+                    if not known.is_available:
+                        known.is_available = True
+                        session.add(known)
+                        if known.episode_id is not None:
+                            episodes_changed.add(known.episode_id)
+                        logger.info(f'File restored: {abs_path}')
+                    continue
+
+                try:
+                    created_episode_id = await process_tv_file(
+                        file_path, session, tmdb, cache, background_tasks
+                    )
+                    if created_episode_id is not None:
+                        episodes_changed.add(created_episode_id)
+                except Exception as e:
+                    logger.error(f'Error processing {file_path.name}: {e}')
+                    await session.rollback()
+
+            for path, mf in existing.items():
+                if path in seen_paths:
+                    continue
+                if mf.is_available:
+                    mf.is_available = False
+                    session.add(mf)
+                    if mf.episode_id is not None:
+                        episodes_changed.add(mf.episode_id)
+                    logger.warning(f'File missing: {path}')
+
+            await session.commit()
+
+    return episodes_changed
 
 
 async def get_all_directories(session: AsyncSession):
@@ -543,11 +642,39 @@ async def add_scan_directory(session: AsyncSession, path: str, media_type: str):
     return new_dir
 
 
+async def _rollup_library_status(
+    movies_changed: set[int], episodes_changed: set[int]
+) -> None:
+    """Propagates is_available changes up the catalog hierarchy:
+    Movie / Episode → Season → TVShow.
+    """
+    if not movies_changed and not episodes_changed:
+        return
+
+    async with AsyncSessionLocal() as session:
+        await _rollup_movie_availability(session, movies_changed)
+        seasons_to_check = await _rollup_episode_availability(session, episodes_changed)
+        if seasons_to_check:
+            await session.flush()
+        shows_to_check = await _rollup_season_status(session, seasons_to_check)
+        if shows_to_check:
+            await session.flush()
+        await _rollup_show_status(session, shows_to_check)
+        await session.commit()
+
+
 async def run_full_scan():
-    """Reads all directories from the DB and scans them based on their type."""
+    """Reads all directories from the DB and scans them based on their type.
+
+    For each directory: adds new files, restores files that reappeared,
+    and flips vanished files to is_available=False. After all directories
+    are processed, library_status is rolled up Movie/Episode → Season → TVShow.
+    """
     logger.info('Starting global background scan...')
 
-    active_downloads = set()
+    active_downloads: set = set()
+    movies_changed: set[int] = set()
+    episodes_changed: set[int] = set()
 
     async with AsyncSessionLocal() as session:
         stmt = select(ScanDirectory)
@@ -566,11 +693,14 @@ async def run_full_scan():
             )
 
             if directory.media_type == 'movies':
-                await scan_movies_directory(directory.path, active_downloads)
+                movies_changed |= await scan_movies_directory(
+                    directory.path, active_downloads
+                )
             elif directory.media_type == 'shows':
-                await scan_tv_shows_directory(directory.path, active_downloads)
+                episodes_changed |= await scan_tv_shows_directory(
+                    directory.path, active_downloads
+                )
 
-            # Update the last_scanned timestamp
             directory.last_scanned = get_brussels_time()
             session.add(directory)
             await session.commit()
@@ -581,7 +711,80 @@ async def run_full_scan():
             )
             await asyncio.gather(*active_downloads, return_exceptions=True)
 
-        logger.info('--- Global Scan Complete ---')
+    await _rollup_library_status(movies_changed, episodes_changed)
+    logger.info(
+        f'--- Global Scan Complete (movies touched: {len(movies_changed)}, '
+        f'episodes touched: {len(episodes_changed)}) ---'
+    )
+
+
+async def run_availability_scan() -> None:
+    """Walks every ScanDirectory and reconciles MediaFile.is_available without
+    creating new catalog rows or hitting TMDB. Files seen on disk are marked
+    available, vanished files are flipped to unavailable, and library_status
+    is rolled up Movie / Episode → Season → TVShow.
+
+    Use this when you only need a fast on-disk presence sweep (e.g. after a
+    drive unmount/remount); use `run_full_scan` when you also expect new
+    files to ingest.
+    """
+    logger.info('Starting library availability scan...')
+
+    movies_changed: set[int] = set()
+    episodes_changed: set[int] = set()
+
+    async with AsyncSessionLocal() as session:
+        directories = (await session.execute(select(ScanDirectory))).scalars().all()
+        if not directories:
+            logger.warning(
+                'No directories found in database. Add one via the API first!'
+            )
+            return
+
+        for directory in directories:
+            root_path = Path(directory.path)
+            if not root_path.exists() or not root_path.is_dir():
+                logger.error(f'Directory not found: {directory.path}')
+                continue
+
+            abs_root = str(root_path.absolute())
+            is_movies = directory.media_type == 'movies'
+            existing = await _existing_files_under(session, abs_root, movies=is_movies)
+
+            seen_paths: set[str] = set()
+            for file_path in root_path.rglob('*'):
+                if (
+                    file_path.is_file()
+                    and file_path.suffix.lower() in ALLOWED_EXTENSIONS
+                ):
+                    seen_paths.add(str(file_path.absolute()))
+
+            for path, mf in existing.items():
+                present = path in seen_paths
+                if present and not mf.is_available:
+                    mf.is_available = True
+                    session.add(mf)
+                    if mf.movie_id is not None:
+                        movies_changed.add(mf.movie_id)
+                    if mf.episode_id is not None:
+                        episodes_changed.add(mf.episode_id)
+                    logger.info(f'File restored: {path}')
+                elif not present and mf.is_available:
+                    mf.is_available = False
+                    session.add(mf)
+                    if mf.movie_id is not None:
+                        movies_changed.add(mf.movie_id)
+                    if mf.episode_id is not None:
+                        episodes_changed.add(mf.episode_id)
+                    logger.warning(f'File missing: {path}')
+
+        await session.commit()
+
+    await _rollup_library_status(movies_changed, episodes_changed)
+    logger.info(
+        f'--- Availability scan complete (movies touched: {len(movies_changed)}, '
+        f'episodes touched: {len(episodes_changed)}) ---'
+    )
 
 
 async def delete_scan_directory(session: AsyncSession, directory_id: int) -> bool:

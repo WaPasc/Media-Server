@@ -1,5 +1,4 @@
 import logging
-import os
 from typing import List
 
 from sqlalchemy import exists, select
@@ -123,74 +122,3 @@ async def _rollup_show_status(db: AsyncSession, shows_to_check: set[int]) -> Non
             db.add(show)
 
     logger.info(f'Rolled up availability status for {len(shows_to_check)} shows.')
-
-
-async def scan_library_availability(db: AsyncSession):
-    """
-    Checks if physical files still exist.
-    Updates MediaFile.is_available (file-on-disk flag) and propagates to
-    library_status on the catalog tables. Records are NOT deleted.
-
-    Propagation order: MediaFile → Movie / Episode → Season → TVShow.
-    """
-    logger.info('Starting library availability scan...')
-
-    # Fetch all files and their current status
-    stmt = select(MediaFile)
-    result = await db.execute(stmt)
-    files = result.scalars().all()
-
-    movies_to_check = set()
-    episodes_to_check = set()
-
-    files_marked_missing = 0
-    files_marked_found = 0
-
-    # Check the filesystem
-    for f in files:
-        file_exists = os.path.exists(f.file_path)
-
-        # Did the status change?
-        if file_exists != f.is_available:
-            f.is_available = file_exists
-            db.add(f)  # Queue the update
-
-            # Log the exact file changes
-            if file_exists:
-                logger.info(f'File restored: {f.file_path}')
-                files_marked_found += 1
-            else:
-                logger.warning(f'File missing: {f.file_path}')
-                files_marked_missing += 1
-
-            # Note the parent IDs so we can update them next
-            if f.movie_id:
-                movies_to_check.add(f.movie_id)
-            if f.episode_id:
-                episodes_to_check.add(f.episode_id)
-
-    # Update parent Movies and Episodes
-    await _rollup_movie_availability(db, movies_to_check)
-    seasons_to_check = await _rollup_episode_availability(db, episodes_to_check)
-
-    # Flush so the EXISTS queries below see the just-updated episode statuses
-    # within the same transaction.
-    if seasons_to_check:
-        await db.flush()
-
-    # Propagate up: episodes → seasons → shows.
-    shows_to_check = await _rollup_season_status(db, seasons_to_check)
-    if shows_to_check:
-        await db.flush()
-    await _rollup_show_status(db, shows_to_check)
-
-    # Commit all changes at once
-    if files_marked_missing > 0 or files_marked_found > 0:
-        await db.commit()
-        logger.info(
-            f'Scan complete. Missing: {files_marked_missing} | Restored: {files_marked_found}'
-        )
-    else:
-        logger.info(
-            'Scan complete. All files are perfectly matching the database state.'
-        )

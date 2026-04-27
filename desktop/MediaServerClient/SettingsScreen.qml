@@ -121,7 +121,7 @@ Rectangle {
                     }
 
                     Text {
-                        text: "Scan all directories for new media. Use 'Check Availability' if you removed files from disk."
+                        text: "Full scan ingests new media and reconciles missing files. Use 'Check Availability' for a fast on-disk presence sweep without TMDB calls."
                         color: Theme.textSecondary
                         font.pixelSize: 14
                         wrapMode: Text.WordWrap
