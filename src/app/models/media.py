@@ -21,9 +21,7 @@ if TYPE_CHECKING:
 # `removed` = used to be in library, file is gone, watch state preserved.
 # `placeholder` = TMDB-known but no file yet (partial seasons, future use).
 LIBRARY_STATUS_VALUES = ('present', 'removed', 'placeholder')
-_LIBRARY_STATUS_CHECK = (
-    "library_status IN ('present', 'removed', 'placeholder')"
-)
+_LIBRARY_STATUS_CHECK = "library_status IN ('present', 'removed', 'placeholder')"
 
 
 class MediaFile(Base):
@@ -72,6 +70,9 @@ class Movie(Base):
     poster_path: Mapped[Optional[str]] = mapped_column(String(255))  # Vertical
     backdrop_path: Mapped[Optional[str]] = mapped_column(String(255))  # Horizontal
 
+    # Runtime in minutes, sourced from TMDB.
+    runtime: Mapped[Optional[int]]
+
     library_status: Mapped[str] = mapped_column(
         String(20), default='present', nullable=False, index=True
     )
@@ -113,6 +114,10 @@ class Episode(Base):
 
     # Episodes sometimes have their own "still" image from TMDB
     still_path: Mapped[Optional[str]] = mapped_column(String(255))
+
+    # Runtime in minutes, sourced from the per-episode entry on TMDB's
+    # /tv/{id}/season/{n} payload.
+    runtime: Mapped[Optional[int]]
 
     season: Mapped['Season'] = relationship(back_populates='episodes')
 

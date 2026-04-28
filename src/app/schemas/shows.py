@@ -43,6 +43,7 @@ class EpisodeResponse(BaseModel):
     episode_number: int
     title: str | None = None
     overview: str | None = None
+    runtime: int | None = None
     file_id: int | None = None
     still_url: str | None = None
     still_url_fallback: str | None = None
@@ -79,6 +80,7 @@ class ShowDetailResponse(ShowResponse):
                         episode_number=ep.episode_number,
                         title=ep.title,
                         overview=ep.overview,
+                        runtime=ep.runtime,
                         file_id=file_id,
                         still_url=s3_client.build_public_url(ep.still_path)
                         if ep.still_path

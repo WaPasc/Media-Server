@@ -10,6 +10,7 @@ class MovieResponse(BaseModel):
     title: str
     year: int | None = None
     overview: str | None = None
+    runtime: int | None = None
     poster_url: str | None = None
     poster_url_fallback: str | None = None
     backdrop_url: str | None = None
@@ -35,6 +36,7 @@ class MovieResponse(BaseModel):
             title=m.title,
             year=m.year,
             overview=m.overview,
+            runtime=m.runtime,
             poster_url=s3_client.build_public_url(m.poster_path)
             if m.poster_path
             else None,

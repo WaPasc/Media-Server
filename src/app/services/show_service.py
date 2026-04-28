@@ -86,6 +86,7 @@ async def refresh_show_metadata(db: AsyncSession, tmdb: TMDBClient, show_id: int
                 episode.title = ep_data.get('name', episode.title)
                 episode.overview = ep_data.get('overview', episode.overview)
                 episode.still_path = ep_data.get('still_path', episode.still_path)
+                episode.runtime = ep_data.get('runtime', episode.runtime)
 
     await db.commit()
 

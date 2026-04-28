@@ -92,6 +92,8 @@ async def _get_or_create_movie(
 
     # Create if missing
     if not movie:
+        # /search/movie does not include runtime; fetch full record for it.
+        full_data = await tmdb.get_movie(tmdb_id)
         parsed_year = local_year or (
             best_match.get('release_date', '')[:4]
             if best_match.get('release_date')
@@ -104,6 +106,7 @@ async def _get_or_create_movie(
             overview=best_match.get('overview'),
             poster_path=best_match.get('poster_path'),
             backdrop_path=best_match.get('backdrop_path'),
+            runtime=full_data.get('runtime'),
         )
         session.add(movie)
         await session.flush()
@@ -483,6 +486,7 @@ async def _get_or_create_episode(
             else f'Episode {episode_number}',
             overview=ep_data.get('overview') if ep_data else None,
             still_path=ep_data.get('still_path') if ep_data else None,
+            runtime=ep_data.get('runtime') if ep_data else None,
         )
         session.add(episode)
         await session.flush()

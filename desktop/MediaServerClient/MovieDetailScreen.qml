@@ -14,10 +14,20 @@ Item {
     property int movieId: -1
     property string movieTitle: ""
     property string movieYear: ""
+    property int movieRuntime: 0
     property string backdropUrl: ""
     property string backdropFallbackUrl: ""
     property string overview: ""
     property int fileId: -1
+
+    function formatRuntime(min) {
+        if (!min || min <= 0) return "";
+        let h = Math.floor(min / 60);
+        let m = min % 60;
+        if (h <= 0) return m + "m";
+        if (m <= 0) return h + "h";
+        return h + "h " + m + "m";
+    }
 
     onMovieIdChanged: {
         if (movieId !== -1)
@@ -33,6 +43,7 @@ Item {
     function loadMovieDetails() {
         movieTitle = ""
         movieYear = ""
+        movieRuntime = 0
         backdropUrl = ""
         backdropFallbackUrl = ""
         overview = ""
@@ -41,6 +52,7 @@ Item {
         API.get("/api/movie/" + movieId).then(function (data) {
             movieTitle = data.title || "";
             movieYear = data.year ? data.year.toString() : "Unknown Year";
+            movieRuntime = data.runtime || 0;
             backdropUrl = data.backdrop_url || "";
             backdropFallbackUrl = data.backdrop_url_fallback || "";
             overview = data.overview || "No overview available for this title.";
@@ -148,12 +160,34 @@ Item {
                 height: 16
             }
 
-            // Year
-            Text {
-                text: movieYear
-                color: Theme.textHover
-                font.pixelSize: 24
-                font.bold: true
+            // Year · Runtime
+            Row {
+                spacing: 12
+
+                Text {
+                    text: movieYear
+                    color: Theme.textHover
+                    font.pixelSize: 24
+                    font.bold: true
+                }
+
+                Text {
+                    text: "·"
+                    color: Theme.textSecondary
+                    font.pixelSize: 24
+                    font.bold: true
+                    visible: movieRuntime > 0
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                Text {
+                    text: formatRuntime(movieRuntime)
+                    color: Theme.textHover
+                    font.pixelSize: 24
+                    font.bold: true
+                    visible: movieRuntime > 0
+                    anchors.verticalCenter: parent.verticalCenter
+                }
             }
 
             Item {

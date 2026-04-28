@@ -27,6 +27,15 @@ Item {
         id: episodeModel
     }
 
+    function formatRuntime(min) {
+        if (!min || min <= 0) return "";
+        let h = Math.floor(min / 60);
+        let m = min % 60;
+        if (h <= 0) return m + "m";
+        if (m <= 0) return h + "h";
+        return h + "h " + m + "m";
+    }
+
     onShowIdChanged: {
         if (showId !== -1) {
             savedSeasonIndex = 0; // Reset season memory for new show
@@ -96,6 +105,7 @@ Item {
                 "episodeNum": ep.episode_number,
                 "epTitle": ep.title,
                 "epOverview": ep.overview || "No description available.",
+                "epRuntime": ep.runtime || 0,
                 "fileId": ep.file_id || -1,
                 "stillUrl": ep.still_url || backdropUrl || "",
                 "stillFallbackUrl": ep.still_url_fallback || backdropFallbackUrl || "",
@@ -549,6 +559,15 @@ Item {
                                     color: Theme.accentLight
                                     font.pixelSize: 12
                                     font.bold: true
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                                Text {
+                                    visible: model.epRuntime > 0
+                                    text: "· " + formatRuntime(model.epRuntime)
+                                    color: Theme.textTertiary
+                                    font.pixelSize: 12
+                                    font.bold: true
+                                    anchors.verticalCenter: parent.verticalCenter
                                 }
                                 Rectangle {
                                     visible: !epPlayable
@@ -556,6 +575,7 @@ Item {
                                     height: 18
                                     radius: 9
                                     color: Theme.bgBadge
+                                    anchors.verticalCenter: parent.verticalCenter
                                     Text {
                                         anchors.centerIn: parent
                                         text: epPlaceholder ? "COMING SOON" : "MISSING FILE"

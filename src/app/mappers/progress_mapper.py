@@ -21,11 +21,14 @@ def _pick_playable_file(files: list[MediaFile]) -> MediaFile | None:
 
 
 def build_base(progress: WatchProgress, playable: MediaFile | None) -> dict:
+    duration = playable.duration if playable else None
     return dict(
         file_id=playable.id if playable else None,
         stopped_at=progress.stopped_at,
-        duration=playable.duration if playable else None,
-        progress_percentage=calculate_progress_percentage(progress),
+        duration=duration,
+        progress_percentage=calculate_progress_percentage(
+            progress.stopped_at, duration
+        ),
         updated_at=progress.updated_at.isoformat(),
     )
 

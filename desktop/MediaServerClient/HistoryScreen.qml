@@ -51,7 +51,7 @@ Item {
                     "showTitle": parsedShowTitle,
                     "imageUrl": parsedImage,
                     "imageFallbackUrl": parsedFallbackImage,
-                    "fileId": item.file_id,
+                    "fileId": item.file_id || -1,
                     // Optional: If you want to show when they watched it
                     "watchedDate": item.last_watched || "Previously Watched"
                 });

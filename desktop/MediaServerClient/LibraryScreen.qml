@@ -48,7 +48,7 @@ Item {
                     "imageUrl": parsedImage,
                     "imageFallbackUrl": parsedFallbackImage,
                     "progress": item.progress_percentage || 0.0,
-                    "fileId": item.file_id
+                    "fileId": item.file_id || -1
                 });
             }
         }).catch(function (error) {
