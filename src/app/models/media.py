@@ -73,6 +73,11 @@ class Movie(Base):
     # Runtime in minutes, sourced from TMDB.
     runtime: Mapped[Optional[int]]
 
+    # IMDb identifier (e.g. "tt0133093"), cached from TMDB. The actual
+    # rating is looked up at read time against the imdb_ratings dataset
+    # table (see app.models.imdb).
+    imdb_id: Mapped[Optional[str]] = mapped_column(String(20), index=True)
+
     library_status: Mapped[str] = mapped_column(
         String(20), default='present', nullable=False, index=True
     )
@@ -118,6 +123,11 @@ class Episode(Base):
     # Runtime in minutes, sourced from the per-episode entry on TMDB's
     # /tv/{id}/season/{n} payload.
     runtime: Mapped[Optional[int]]
+
+    # IMDb identifier (cached from TMDB). Episodes have their own IMDb
+    # IDs distinct from the parent show. Rating is looked up from the
+    # imdb_ratings dataset table at read time.
+    imdb_id: Mapped[Optional[str]] = mapped_column(String(20), index=True)
 
     season: Mapped['Season'] = relationship(back_populates='episodes')
 

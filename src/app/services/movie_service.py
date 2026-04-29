@@ -41,6 +41,7 @@ async def refresh_movie_metadata(db: AsyncSession, tmdb: TMDBClient, movie_id: i
     movie.poster_path = data.get('poster_path', movie.poster_path)
     movie.backdrop_path = data.get('backdrop_path', movie.backdrop_path)
     movie.runtime = data.get('runtime', movie.runtime)
+    movie.imdb_id = data.get('imdb_id', movie.imdb_id)
 
     await db.commit()
 

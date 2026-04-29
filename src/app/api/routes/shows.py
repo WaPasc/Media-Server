@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_db, get_tmdb_client
 from app.schemas.shows import ShowDetailResponse, ShowResponse
+from app.services.imdb_dataset_service import get_ratings_for_imdb_ids
 from app.services.show_service import (
     get_all_shows,
     get_show_by_id,
@@ -40,7 +41,15 @@ async def get_show_details(
     if not show:
         raise HTTPException(status_code=404, detail='TV show not found')
 
-    return ShowDetailResponse.from_model(show, tmdb_client)
+    imdb_ids = [
+        ep.imdb_id
+        for season in show.seasons
+        for ep in season.episodes
+        if ep.imdb_id
+    ]
+    ratings = await get_ratings_for_imdb_ids(db, imdb_ids)
+
+    return ShowDetailResponse.from_model(show, tmdb_client, ratings)
 
 
 @router.post('/show/{show_id}/refresh')

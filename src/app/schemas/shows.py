@@ -49,6 +49,7 @@ class EpisodeResponse(BaseModel):
     still_url_fallback: str | None = None
     is_completed: bool | None = False
     library_status: str | None = 'present'
+    imdb_rating: float | None = None
 
 
 class SeasonResponse(BaseModel):
@@ -61,7 +62,12 @@ class ShowDetailResponse(ShowResponse):
     seasons: list[SeasonResponse]
 
     @classmethod
-    def from_model(cls, s: TVShow, tmdb_client: TMDBClient):
+    def from_model(
+        cls,
+        s: TVShow,
+        tmdb_client: TMDBClient,
+        imdb_ratings: dict[str, float] | None = None,
+    ):
         seasons_data = []
 
         for season in s.seasons:
@@ -73,6 +79,12 @@ class ShowDetailResponse(ShowResponse):
                 completed = next(
                     (p.is_completed for p in ep.progress if p.user_id == 1),
                     False,
+                )
+
+                rating = (
+                    imdb_ratings.get(ep.imdb_id)
+                    if imdb_ratings is not None and ep.imdb_id
+                    else None
                 )
 
                 episodes_data.append(
@@ -90,6 +102,7 @@ class ShowDetailResponse(ShowResponse):
                         else None,
                         is_completed=completed,
                         library_status=ep.library_status,
+                        imdb_rating=rating,
                     )
                 )
 

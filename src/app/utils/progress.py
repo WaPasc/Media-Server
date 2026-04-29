@@ -1,6 +1,4 @@
-def calculate_progress_percentage(
-    stopped_at: float, duration: float | None
-) -> float:
+def calculate_progress_percentage(stopped_at: float, duration: float | None) -> float:
     if not duration or duration <= 0:
         return 0.0
 

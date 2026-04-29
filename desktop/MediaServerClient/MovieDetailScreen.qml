@@ -15,6 +15,7 @@ Item {
     property string movieTitle: ""
     property string movieYear: ""
     property int movieRuntime: 0
+    property real movieRating: 0
     property string backdropUrl: ""
     property string backdropFallbackUrl: ""
     property string overview: ""
@@ -44,6 +45,7 @@ Item {
         movieTitle = ""
         movieYear = ""
         movieRuntime = 0
+        movieRating = 0
         backdropUrl = ""
         backdropFallbackUrl = ""
         overview = ""
@@ -53,6 +55,7 @@ Item {
             movieTitle = data.title || "";
             movieYear = data.year ? data.year.toString() : "Unknown Year";
             movieRuntime = data.runtime || 0;
+            movieRating = data.imdb_rating || 0;
             backdropUrl = data.backdrop_url || "";
             backdropFallbackUrl = data.backdrop_url_fallback || "";
             overview = data.overview || "No overview available for this title.";
@@ -186,6 +189,21 @@ Item {
                     font.pixelSize: 24
                     font.bold: true
                     visible: movieRuntime > 0
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                Text {
+                    text: "·"
+                    color: Theme.textSecondary
+                    font.pixelSize: 24
+                    font.bold: true
+                    visible: movieRating > 0
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                RatingBadge {
+                    rating: movieRating
+                    fontSize: 16
                     anchors.verticalCenter: parent.verticalCenter
                 }
             }

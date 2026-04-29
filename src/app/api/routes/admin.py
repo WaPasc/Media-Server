@@ -7,6 +7,8 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, Header, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
 
+from app.services.imdb_dataset_service import refresh as refresh_imdb_dataset
+
 router = APIRouter(prefix='/api/admin', tags=['admin'])
 
 
@@ -200,3 +202,15 @@ async def restore_database(
         )
 
     return {'status': 'success', 'message': 'Database restored'}
+
+
+@router.post('/refresh-imdb-ratings')
+async def refresh_imdb_ratings(x_admin_token: str | None = Header(default=None)):
+    """Force a download + ingest of the IMDb ratings dataset.
+
+    Runs synchronously (so the response carries the result) and bypasses
+    the 7-day staleness check. Used during development; in normal
+    operation the lifespan startup hook handles weekly refreshes.
+    """
+    _require_admin(x_admin_token)
+    return await refresh_imdb_dataset(force=True)

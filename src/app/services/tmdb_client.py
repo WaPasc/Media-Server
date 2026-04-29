@@ -103,12 +103,22 @@ class TMDBClient:
     async def get_tv_show(self, tv_show_id):
         return await self._get(f'/tv/{tv_show_id}')
 
+    async def get_tv_show_external_ids(self, tv_show_id):
+        return await self._get(f'/tv/{tv_show_id}/external_ids')
+
     async def get_tv_season(self, tv_show_id, season_number):
         return await self._get(f'/tv/{tv_show_id}/season/{season_number}')
 
     async def get_tv_episode(self, tv_show_id, season_number, episode_number):
         return await self._get(
             f'/tv/{tv_show_id}/season/{season_number}/episode/{episode_number}'
+        )
+
+    async def get_tv_episode_external_ids(
+        self, tv_show_id, season_number, episode_number
+    ):
+        return await self._get(
+            f'/tv/{tv_show_id}/season/{season_number}/episode/{episode_number}/external_ids'
         )
 
     async def search_tv_show(

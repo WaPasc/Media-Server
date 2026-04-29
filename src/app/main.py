@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 
 import uvicorn
@@ -6,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import admin, history, movies, progress, scanner, shows, stream
 from app.core.s3 import s3_client
+from app.services.imdb_dataset_service import refresh_if_stale as imdb_refresh_if_stale
 from app.services.tmdb_client import TMDBClient
 from app.utils.s3_utils import apply_public_read_policy, ensure_bucket_exists
 
@@ -17,6 +19,12 @@ async def lifespan(app: FastAPI):
     if s3_client.images_bucket:
         await ensure_bucket_exists(s3_client.images_bucket)
         await apply_public_read_policy(s3_client.images_bucket)
+
+    # Fire-and-forget: the dataset ingest takes a few seconds and we don't
+    # want to block readiness on it. Hold a reference so the task isn't
+    # garbage-collected before it finishes.
+    app.state.imdb_refresh_task = asyncio.create_task(imdb_refresh_if_stale())
+
     try:
         yield
     finally:

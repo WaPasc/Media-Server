@@ -7,3 +7,10 @@ __pycache__
 **/**.egg-info
 minio
 backups
+# Ignore everything inside app_data/ ...
+app_data/*
+# ... but keep the imdb/ folder structure committed ...
+!app_data/imdb/
+# ... while still ignoring its actual contents (the dataset .tsv.gz, .tmp).
+app_data/imdb/*
+!app_data/imdb/.gitkeep

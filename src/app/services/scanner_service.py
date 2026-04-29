@@ -107,6 +107,7 @@ async def _get_or_create_movie(
             poster_path=best_match.get('poster_path'),
             backdrop_path=best_match.get('backdrop_path'),
             runtime=full_data.get('runtime'),
+            imdb_id=full_data.get('imdb_id'),
         )
         session.add(movie)
         await session.flush()
@@ -667,6 +668,61 @@ async def _rollup_library_status(
         await session.commit()
 
 
+async def _backfill_episode_imdb_ids(session: AsyncSession, tmdb: TMDBClient) -> int:
+    """Fill missing per-episode imdb_ids from TMDB so the IMDb dataset
+    lookup at read time can find a rating.
+
+    No show-level fallback: each episode has its own tconst in the IMDb
+    ratings dataset, and the show's tconst would silently return the
+    show's overall rating for every episode that hit the fallback. If
+    TMDB has no episode-level imdb_id, leave it NULL, the episode just
+    won't display a rating, which is the correct outcome.
+    """
+    stmt = (
+        select(Episode, Season.season_number, TVShow.tmdb_id)
+        .join(Season, Episode.season_id == Season.id)
+        .join(TVShow, Season.show_id == TVShow.id)
+        .where(Episode.imdb_id.is_(None), TVShow.tmdb_id.is_not(None))
+    )
+    rows = (await session.execute(stmt)).all()
+    updated = 0
+
+    for episode, season_number, show_tmdb_id in rows:
+        try:
+            ext = await tmdb.get_tv_episode_external_ids(
+                show_tmdb_id, season_number, episode.episode_number
+            )
+        except Exception as e:
+            logger.warning(
+                'TMDB external_ids(%s, S%s E%s) failed: %s',
+                show_tmdb_id,
+                season_number,
+                episode.episode_number,
+                e,
+            )
+            continue
+
+        new_id = ext.get('imdb_id')
+        if new_id:
+            episode.imdb_id = new_id
+            updated += 1
+
+    if updated:
+        await session.commit()
+    return updated
+
+
+async def _backfill_imdb_ids() -> None:
+    """Fill missing imdb_ids on episodes (movies already get theirs at
+    create time from /movie/{id}). Cheap to run at the end of every scan
+    — the SELECT short-circuits when nothing is missing.
+    """
+    async with TMDBClient() as tmdb, AsyncSessionLocal() as session:
+        episodes_filled = await _backfill_episode_imdb_ids(session, tmdb)
+        if episodes_filled:
+            logger.info('IMDb id backfill: episodes=%d', episodes_filled)
+
+
 async def run_full_scan():
     """Reads all directories from the DB and scans them based on their type.
 
@@ -716,6 +772,7 @@ async def run_full_scan():
             await asyncio.gather(*active_downloads, return_exceptions=True)
 
     await _rollup_library_status(movies_changed, episodes_changed)
+    await _backfill_imdb_ids()
     logger.info(
         f'--- Global Scan Complete (movies touched: {len(movies_changed)}, '
         f'episodes touched: {len(episodes_changed)}) ---'

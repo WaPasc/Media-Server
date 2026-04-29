@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -8,6 +9,8 @@ from app.core.constants import TMDB_BACKDROP_SIZE, TMDB_POSTER_SIZE, TMDB_STILL_
 from app.models.media import Episode, Season, TVShow
 from app.services.minio_service import ensure_image_in_minio
 from app.services.tmdb_client import TMDBClient
+
+logger = logging.getLogger(__name__)
 
 
 async def get_all_shows(
@@ -87,6 +90,29 @@ async def refresh_show_metadata(db: AsyncSession, tmdb: TMDBClient, show_id: int
                 episode.overview = ep_data.get('overview', episode.overview)
                 episode.still_path = ep_data.get('still_path', episode.still_path)
                 episode.runtime = ep_data.get('runtime', episode.runtime)
+                # Heal episodes whose tmdb_id was null because the season
+                # payload didn't include them at scan time but TMDB has
+                # the entry now.
+                episode.tmdb_id = ep_data.get('id', episode.tmdb_id)
+
+    # Backfill missing per-episode imdb_ids from TMDB. Each episode has
+    # its own tconst in the IMDb ratings dataset, so the show's tconst
+    # is no use as a fallback, leave imdb_id NULL when TMDB has none
+    # and the episode simply won't display a rating.
+    for season in show.seasons:
+        for episode in season.episodes:
+            if episode.imdb_id:
+                continue
+            try:
+                ext = await tmdb.get_tv_episode_external_ids(
+                    show.tmdb_id, season.season_number, episode.episode_number
+                )
+            except Exception as e:
+                logger.warning('TMDB external_ids failed: %s', e)
+                continue
+            new_id = ext.get('imdb_id')
+            if new_id:
+                episode.imdb_id = new_id
 
     await db.commit()
 

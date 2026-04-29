@@ -38,6 +38,7 @@ qt_add_qml_module(appMediaServerClient
         DirectoryRow.qml
         AddDirectoryCard.qml
         PlayerControls.qml
+        RatingBadge.qml
 
     SOURCES
         MpvItem.h
@@ -59,6 +60,7 @@ qt_add_qml_module(appMediaServerClient
         audio.svg
         refresh.svg
         placeholder-media.svg
+        imdb-logo.svg
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.

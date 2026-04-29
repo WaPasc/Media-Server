@@ -106,6 +106,7 @@ Item {
                 "epTitle": ep.title,
                 "epOverview": ep.overview || "No description available.",
                 "epRuntime": ep.runtime || 0,
+                "epRating": ep.imdb_rating || 0,
                 "fileId": ep.file_id || -1,
                 "stillUrl": ep.still_url || backdropUrl || "",
                 "stillFallbackUrl": ep.still_url_fallback || backdropFallbackUrl || "",
@@ -567,6 +568,11 @@ Item {
                                     color: Theme.textTertiary
                                     font.pixelSize: 12
                                     font.bold: true
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                                RatingBadge {
+                                    rating: model.epRating
+                                    fontSize: 11
                                     anchors.verticalCenter: parent.verticalCenter
                                 }
                                 Rectangle {

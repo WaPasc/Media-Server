@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 from app.core.database import SQLALCHEMY_DATABASE_URL
 from app.models.base import Base
+from app.models.imdb import *  # noqa: F403
 from app.models.media import *  # noqa: F403
 from app.models.user import *  # noqa: F403
 

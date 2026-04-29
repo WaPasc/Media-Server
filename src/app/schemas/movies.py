@@ -18,9 +18,15 @@ class MovieResponse(BaseModel):
     file_id: int | None = None
     is_completed: bool | None = False
     library_status: str | None = 'present'
+    imdb_rating: float | None = None
 
     @classmethod
-    def from_model(cls, m: Movie, tmdb_client: TMDBClient):
+    def from_model(
+        cls,
+        m: Movie,
+        tmdb_client: TMDBClient,
+        imdb_ratings: dict[str, float] | None = None,
+    ):
         # Pick a file that's actually on disk so the player has something to
         # stream. None is fine, Qt branches on library_status for UI.
         playable = next((f for f in m.files if f.is_available), None)
@@ -29,6 +35,12 @@ class MovieResponse(BaseModel):
         completed = next(
             (p.is_completed for p in m.progress if p.user_id == 1),
             False,
+        )
+
+        rating = (
+            imdb_ratings.get(m.imdb_id)
+            if imdb_ratings is not None and m.imdb_id
+            else None
         )
 
         return cls(
@@ -52,4 +64,5 @@ class MovieResponse(BaseModel):
             file_id=file_id,
             is_completed=completed,
             library_status=m.library_status,
+            imdb_rating=rating,
         )
