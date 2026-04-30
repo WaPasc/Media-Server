@@ -12,9 +12,7 @@
 - [ ] Grace-period for offline disks: `MediaFile.deleted_at` + scheduled cleanup (e.g. 14 days) before flipping to removed.
 
 ## UI / Metadata
-- [ ] Show episode/movie runtime in detail screens.
 - [ ] Show cast and crew on detail screens.
-- [ ] Show external ratings (prefer IMDb; Rotten Tomatoes optional) on detail screens.
 
 ## Web Application
 - [ ] Update the web application to use all the new features and improvements from the backend, ensuring a seamless user experience across both platforms.
