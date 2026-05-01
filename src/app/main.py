@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import admin, history, movies, progress, scanner, shows, stream
 from app.core.s3 import s3_client
 from app.services.imdb_dataset_service import refresh_if_stale as imdb_refresh_if_stale
+from app.services.scanner_service import run_grace_period_loop
 from app.services.tmdb_client import TMDBClient
 from app.utils.s3_utils import apply_public_read_policy, ensure_bucket_exists
 
@@ -25,9 +26,19 @@ async def lifespan(app: FastAPI):
     # garbage-collected before it finishes.
     app.state.imdb_refresh_task = asyncio.create_task(imdb_refresh_if_stale())
 
+    # Daily background sweep that hard-deletes MediaFile rows past their
+    # grace period. Holds a reference so the task isn't GC'd, and is
+    # cancelled cleanly on shutdown.
+    app.state.grace_period_task = asyncio.create_task(run_grace_period_loop())
+
     try:
         yield
     finally:
+        app.state.grace_period_task.cancel()
+        try:
+            await app.state.grace_period_task
+        except asyncio.CancelledError:
+            pass
         await app.state.tmdb_client.close()
 
 

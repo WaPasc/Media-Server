@@ -52,6 +52,13 @@ class MediaFile(Base):
 
     is_available: Mapped[bool] = mapped_column(default=True, nullable=False)
 
+    # Stamped (UTC) when the scanner first finds the file missing on disk;
+    # cleared when the file reappears. A daily sweep hard-deletes rows whose
+    # deleted_at is older than the grace period, so soft-deletes don't pile
+    # up forever. Keep is_available as the source of truth for "playable
+    # right now"; deleted_at only drives cleanup.
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
     movie: Mapped[Optional['Movie']] = relationship(back_populates='files')
     episode: Mapped[Optional['Episode']] = relationship(back_populates='files')
 

@@ -1,10 +1,11 @@
 import asyncio
 import logging
 import os
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import func
+from sqlalchemy import CursorResult, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -27,6 +28,26 @@ logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
 
 ALLOWED_EXTENSIONS = {'.mp4', '.mkv', '.avi', '.webm'}
+
+# How long a soft-deleted MediaFile sticks around before the daily sweep
+# hard-deletes it. Long enough to survive an unmounted USB drive;
+#  short enough that stale rows don't pile up forever.
+GRACE_PERIOD_DAYS = 14
+
+
+def _mark_unavailable(mf: 'MediaFile') -> None:
+    """Flip a file to unavailable and start the grace-period clock. Callers
+    are expected to gate this on the actual state change so we don't keep
+    pushing deleted_at forward on every scan."""
+    mf.is_available = False
+    mf.deleted_at = datetime.now(timezone.utc)
+
+
+def _mark_restored(mf: 'MediaFile') -> None:
+    """Re-enable a file that reappeared on disk and clear the grace-period
+    clock so the daily sweep won't touch it."""
+    mf.is_available = True
+    mf.deleted_at = None
 
 
 def _normalize_title(value: str) -> str:
@@ -221,7 +242,7 @@ async def scan_movies_directory(movies_dir: str, background_tasks: set) -> set[i
                 known = existing.get(abs_path)
                 if known is not None:
                     if not known.is_available:
-                        known.is_available = True
+                        _mark_restored(known)
                         session.add(known)
                         if known.movie_id is not None:
                             movies_changed.add(known.movie_id)
@@ -242,7 +263,7 @@ async def scan_movies_directory(movies_dir: str, background_tasks: set) -> set[i
                 if path in seen_paths:
                     continue
                 if mf.is_available:
-                    mf.is_available = False
+                    _mark_unavailable(mf)
                     session.add(mf)
                     if mf.movie_id is not None:
                         movies_changed.add(mf.movie_id)
@@ -600,7 +621,7 @@ async def scan_tv_shows_directory(tv_shows_dir: str, background_tasks: set) -> s
                 known = existing.get(abs_path)
                 if known is not None:
                     if not known.is_available:
-                        known.is_available = True
+                        _mark_restored(known)
                         session.add(known)
                         if known.episode_id is not None:
                             episodes_changed.add(known.episode_id)
@@ -621,7 +642,7 @@ async def scan_tv_shows_directory(tv_shows_dir: str, background_tasks: set) -> s
                 if path in seen_paths:
                     continue
                 if mf.is_available:
-                    mf.is_available = False
+                    _mark_unavailable(mf)
                     session.add(mf)
                     if mf.episode_id is not None:
                         episodes_changed.add(mf.episode_id)
@@ -823,7 +844,7 @@ async def run_availability_scan() -> None:
             for path, mf in existing.items():
                 present = path in seen_paths
                 if present and not mf.is_available:
-                    mf.is_available = True
+                    _mark_restored(mf)
                     session.add(mf)
                     if mf.movie_id is not None:
                         movies_changed.add(mf.movie_id)
@@ -831,7 +852,7 @@ async def run_availability_scan() -> None:
                         episodes_changed.add(mf.episode_id)
                     logger.info(f'File restored: {path}')
                 elif not present and mf.is_available:
-                    mf.is_available = False
+                    _mark_unavailable(mf)
                     session.add(mf)
                     if mf.movie_id is not None:
                         movies_changed.add(mf.movie_id)
@@ -860,3 +881,49 @@ async def delete_scan_directory(session: AsyncSession, directory_id: int) -> boo
     await session.delete(directory)
     await session.commit()
     return True
+
+
+async def cleanup_grace_expired() -> int:
+    """Hard-delete MediaFile rows that have been unavailable longer than
+    GRACE_PERIOD_DAYS. Returns the number of rows removed.
+
+    Movie/Episode catalog rows are intentionally left in place: watch
+    progress anchors on them, and library_status='removed' already tells
+    the UI there's nothing playable. This sweep just stops orphaned file
+    rows from accumulating forever.
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(days=GRACE_PERIOD_DAYS)
+    async with AsyncSessionLocal() as session:
+        stmt = delete(MediaFile).where(
+            MediaFile.is_available.is_(False),
+            MediaFile.deleted_at.is_not(None),
+            MediaFile.deleted_at < cutoff,
+        )
+        result = await session.execute(stmt)
+        await session.commit()
+        # AsyncSession.execute is typed as Result, but a DELETE returns CursorResult
+        # which exposes rowcount.
+        removed = max(result.rowcount, 0) if isinstance(result, CursorResult) else 0
+
+    if removed:
+        logger.info(
+            'Grace-period sweep removed %d MediaFile rows older than %d days',
+            removed,
+            GRACE_PERIOD_DAYS,
+        )
+    return removed
+
+
+async def run_grace_period_loop() -> None:
+    """Background task: run the grace-period sweep on startup, then once
+    per day. Exits cleanly on cancellation at app shutdown.
+
+    Daily cadence is enough: a row's age is wall-clock-driven, so it
+    doesn't matter whether the sweep catches it a few hours early or late.
+    """
+    while True:
+        try:
+            await cleanup_grace_expired()
+        except Exception as e:
+            logger.warning('Grace-period sweep failed: %s', e)
+        await asyncio.sleep(86400)
