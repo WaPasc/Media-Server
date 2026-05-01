@@ -9,7 +9,6 @@
 
 ## Data Lifecycle & Backup
 - [ ] Restore-on-readd: when a previously removed show/movie reappears, automatically rebind history (watched episodes, progress, ratings, metadata). *(Foundation now in place — WatchProgress anchors on Movie/Episode, so re-adding a file naturally rebinds. Still need: scanner-side reconciliation pass + UI affordance.)*
-- [ ] Grace-period for offline disks: `MediaFile.deleted_at` + scheduled cleanup (e.g. 14 days) before flipping to removed.
 
 ## UI / Metadata
 - [ ] Show cast and crew on detail screens.
