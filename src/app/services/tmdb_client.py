@@ -32,6 +32,7 @@ class TMDBClient:
         self.image_base_url = None
         self.poster_sizes = []
         self.backdrop_sizes = []
+        self.profile_sizes = []
 
     @classmethod
     async def create(cls, timeout=10.0):
@@ -77,6 +78,7 @@ class TMDBClient:
             self.image_base_url = self.config['images']['secure_base_url']
             self.poster_sizes = self.config['images']['poster_sizes']
             self.backdrop_sizes = self.config['images']['backdrop_sizes']
+            self.profile_sizes = self.config['images']['profile_sizes']
         except (httpx.ConnectError, httpx.TimeoutException) as e:
             logger.warning(
                 'Could not reach TMDB at startup (%s). Will retry on first use.', e
@@ -138,6 +140,18 @@ class TMDBClient:
     async def get_tv_show_credits(self, tv_show_id):
         return await self._get(f'/tv/{tv_show_id}/credits')
 
+    async def get_tv_show_aggregate_credits(self, tv_show_id):
+        # /credits returns only the headline cast TMDB attaches to the show
+        # itself; /aggregate_credits rolls up every actor that appeared in any
+        # episode and exposes a `roles` array (one entry per character/season)
+        # along with `total_episode_count` for ordering by prominence.
+        return await self._get(f'/tv/{tv_show_id}/aggregate_credits')
+
+    async def get_tv_episode_credits(self, tv_show_id, season_number, episode_number):
+        return await self._get(
+            f'/tv/{tv_show_id}/season/{season_number}/episode/{episode_number}/credits'
+        )
+
     # -----------------------------
     # Discover
     # -----------------------------
@@ -166,4 +180,7 @@ class TMDBClient:
         return self.build_image_url(path, size)
 
     def get_still_url(self, path, size='w300'):
+        return self.build_image_url(path, size)
+
+    def get_profile_url(self, path, size='w185'):
         return self.build_image_url(path, size)
