@@ -162,6 +162,12 @@ class Episode(Base):
         passive_deletes=True,
     )
 
+    credits: Mapped[List['Credit']] = relationship(
+        back_populates='episode',
+        cascade='all, delete-orphan',
+        passive_deletes=True,
+    )
+
 
 class Season(Base):
     __tablename__ = 'seasons'
@@ -266,27 +272,32 @@ class Person(Base):
 
 
 class Credit(Base):
-    """Cast credit linking a Person to either a Movie or a TVShow.
+    """Cast credit linking a Person to a Movie, a TVShow, or an Episode.
 
-    Episode-level guest credits are intentionally out of scope for v1; if we
-    ever want them, add a nullable episode_id and broaden the CHECK.
+    Exactly one of movie_id, show_id, episode_id is set per row. Show-level
+    rows are the regular/recurring cast (from TMDB aggregate_credits),
+    episode-level rows are guest stars specific to that episode. The episode
+    detail page merges both at read time, deduping on person_id, so we don't
+    duplicate every regular onto every episode.
     """
 
     __tablename__ = 'credits'
     __table_args__ = (
         CheckConstraint(
-            '(movie_id IS NULL AND show_id IS NOT NULL) OR '
-            '(movie_id IS NOT NULL AND show_id IS NULL)',
-            name='chk_credit_movie_or_show',
+            # Exactly one of the three target FKs must be set.
+            '(CASE WHEN movie_id IS NULL THEN 0 ELSE 1 END) + '
+            '(CASE WHEN show_id IS NULL THEN 0 ELSE 1 END) + '
+            '(CASE WHEN episode_id IS NULL THEN 0 ELSE 1 END) = 1',
+            name='chk_credit_exactly_one_target',
         ),
         # The same person can appear once per title, but might play multiple
         # roles (e.g. dual characters). Don't constrain (person_id, title)
-        # uniqueness here — let the scanner replace credits wholesale per
+        # uniqueness here, let the scanner replace credits wholesale per
         # title instead.
         #
-        # Partial indexes: a credit row has either movie_id or show_id, never
-        # both. Excluding the NULL half keeps each index lean and skips rows
-        # the corresponding query path will never touch.
+        # Partial indexes, one per target FK. Each row has exactly one of
+        # the three FKs set, so excluding the NULL rows on each index keeps
+        # them lean and skips rows that query path will never touch.
         Index(
             'ix_credits_movie_order',
             'movie_id',
@@ -298,6 +309,12 @@ class Credit(Base):
             'show_id',
             'episode_count',
             postgresql_where=text('show_id IS NOT NULL'),
+        ),
+        Index(
+            'ix_credits_episode_order',
+            'episode_id',
+            'cast_order',
+            postgresql_where=text('episode_id IS NOT NULL'),
         ),
     )
 
@@ -313,18 +330,28 @@ class Credit(Base):
     show_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey('tv_shows.id', ondelete='CASCADE')
     )
+    episode_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey('episodes.id', ondelete='CASCADE')
+    )
 
     character: Mapped[Optional[str]] = mapped_column(String(255))
 
-    # TMDB's `order` field — lower = more prominent billing. Drives the
-    # default cast list ordering on movie detail screens.
+    # TMDB's `order` field, lower = more prominent billing. Drives the
+    # default cast list ordering on movie and episode detail screens.
     cast_order: Mapped[Optional[int]]
 
-    # Populated for show credits from /aggregate_credits.total_episode_count;
-    # NULL for movie credits. Drives the default cast list ordering on show
-    # detail screens (most-recurring actor first).
+    # Populated for show credits from /aggregate_credits.total_episode_count.
+    # NULL for movie and episode credits. Drives the default cast list
+    # ordering on show detail screens (most-recurring actor first).
     episode_count: Mapped[Optional[int]]
+
+    # Not used yet. Every row written today is 'cast' (actors). Reserved for
+    # future support of crew rows ('crew' with a separate `job` column for
+    # 'Director', 'Writer', etc.) so we don't need a follow-up migration
+    # when that lands.
+    department: Mapped[str] = mapped_column(String(20), default='cast', nullable=False)
 
     person: Mapped['Person'] = relationship(back_populates='credits')
     movie: Mapped[Optional['Movie']] = relationship(back_populates='credits')
     show: Mapped[Optional['TVShow']] = relationship(back_populates='credits')
+    episode: Mapped[Optional['Episode']] = relationship(back_populates='credits')
