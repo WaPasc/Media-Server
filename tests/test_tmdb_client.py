@@ -11,6 +11,7 @@ MOCK_CONFIG = {
         'secure_base_url': 'https://image.tmdb.org/t/p/',
         'poster_sizes': ['w342', 'w500', 'original'],
         'backdrop_sizes': ['w780', 'w1280', 'original'],
+        'profile_sizes': ['w45', 'w185', 'h632', 'original'],
     }
 }
 
@@ -65,6 +66,7 @@ class TestLoadConfiguration:
         assert client.image_base_url == 'https://image.tmdb.org/t/p/'
         assert client.poster_sizes == ['w342', 'w500', 'original']
         assert client.backdrop_sizes == ['w780', 'w1280', 'original']
+        assert client.profile_sizes == ['w45', 'w185', 'h632', 'original']
 
 
 # ---------------------------------------------------------------------------
