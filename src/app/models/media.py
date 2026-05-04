@@ -8,6 +8,7 @@ from sqlalchemy import (
     Index,
     String,
     Text,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -97,6 +98,12 @@ class Movie(Base):
     )
 
     progress: Mapped[List['WatchProgress']] = relationship(
+        back_populates='movie',
+        cascade='all, delete-orphan',
+        passive_deletes=True,
+    )
+
+    credits: Mapped[List['Credit']] = relationship(
         back_populates='movie',
         cascade='all, delete-orphan',
         passive_deletes=True,
@@ -218,6 +225,12 @@ class TVShow(Base):
         passive_deletes=True,
     )
 
+    credits: Mapped[List['Credit']] = relationship(
+        back_populates='show',
+        cascade='all, delete-orphan',
+        passive_deletes=True,
+    )
+
 
 class ScanDirectory(Base):
     __tablename__ = 'scan_directories'
@@ -231,3 +244,87 @@ class ScanDirectory(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=get_brussels_time
     )
+
+
+class Person(Base):
+    __tablename__ = 'people'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    tmdb_id: Mapped[int] = mapped_column(unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(255), index=True)
+
+    # TMDB profile image path (e.g. "/abc123.jpg"). The full URL is built at
+    # read time via TMDBClient.get_profile_url, or eventually mirrored to S3
+    # the same way posters/backdrops are.
+    profile_path: Mapped[Optional[str]] = mapped_column(String(255))
+
+    credits: Mapped[List['Credit']] = relationship(
+        back_populates='person',
+        cascade='all, delete-orphan',
+        passive_deletes=True,
+    )
+
+
+class Credit(Base):
+    """Cast credit linking a Person to either a Movie or a TVShow.
+
+    Episode-level guest credits are intentionally out of scope for v1; if we
+    ever want them, add a nullable episode_id and broaden the CHECK.
+    """
+
+    __tablename__ = 'credits'
+    __table_args__ = (
+        CheckConstraint(
+            '(movie_id IS NULL AND show_id IS NOT NULL) OR '
+            '(movie_id IS NOT NULL AND show_id IS NULL)',
+            name='chk_credit_movie_or_show',
+        ),
+        # The same person can appear once per title, but might play multiple
+        # roles (e.g. dual characters). Don't constrain (person_id, title)
+        # uniqueness here — let the scanner replace credits wholesale per
+        # title instead.
+        #
+        # Partial indexes: a credit row has either movie_id or show_id, never
+        # both. Excluding the NULL half keeps each index lean and skips rows
+        # the corresponding query path will never touch.
+        Index(
+            'ix_credits_movie_order',
+            'movie_id',
+            'cast_order',
+            postgresql_where=text('movie_id IS NOT NULL'),
+        ),
+        Index(
+            'ix_credits_show_episode_count',
+            'show_id',
+            'episode_count',
+            postgresql_where=text('show_id IS NOT NULL'),
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    person_id: Mapped[int] = mapped_column(
+        ForeignKey('people.id', ondelete='CASCADE'), index=True
+    )
+
+    movie_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey('movies.id', ondelete='CASCADE')
+    )
+    show_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey('tv_shows.id', ondelete='CASCADE')
+    )
+
+    character: Mapped[Optional[str]] = mapped_column(String(255))
+
+    # TMDB's `order` field — lower = more prominent billing. Drives the
+    # default cast list ordering on movie detail screens.
+    cast_order: Mapped[Optional[int]]
+
+    # Populated for show credits from /aggregate_credits.total_episode_count;
+    # NULL for movie credits. Drives the default cast list ordering on show
+    # detail screens (most-recurring actor first).
+    episode_count: Mapped[Optional[int]]
+
+    person: Mapped['Person'] = relationship(back_populates='credits')
+    movie: Mapped[Optional['Movie']] = relationship(back_populates='credits')
+    show: Mapped[Optional['TVShow']] = relationship(back_populates='credits')
