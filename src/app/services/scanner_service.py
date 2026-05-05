@@ -19,6 +19,11 @@ from app.services.availability_service import (
     _rollup_season_status,
     _rollup_show_status,
 )
+from app.services.credits_service import (
+    sync_episode_credits,
+    sync_movie_credits,
+    sync_show_credits,
+)
 from app.services.minio_service import ensure_image_in_minio
 from app.services.tmdb_client import TMDBClient
 from app.utils.datetime import get_brussels_time
@@ -146,6 +151,8 @@ async def _get_or_create_movie(
             )
             background_tasks.add(task)
             task.add_done_callback(background_tasks.discard)
+
+        await sync_movie_credits(session, tmdb, movie.id, tmdb_id, background_tasks)
 
     return movie.id
 
@@ -389,6 +396,10 @@ async def _get_or_create_tv_show(
             background_tasks.add(task)
             task.add_done_callback(background_tasks.discard)
 
+        await sync_show_credits(
+            session, tmdb, tv_show.id, show_tmdb_id, background_tasks
+        )
+
     show_id = tv_show.id
     show_tmdb_id = tv_show.tmdb_id
 
@@ -519,6 +530,16 @@ async def _get_or_create_episode(
             )
             background_tasks.add(task)
             task.add_done_callback(background_tasks.discard)
+
+        await sync_episode_credits(
+            session,
+            tmdb,
+            episode.id,
+            show_tmdb_id,
+            season_number,
+            episode_number,
+            background_tasks,
+        )
 
     return episode.id
 
