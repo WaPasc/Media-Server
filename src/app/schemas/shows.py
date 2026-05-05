@@ -2,6 +2,7 @@ from pydantic import BaseModel
 
 from app.core.s3 import s3_client
 from app.models.media import TVShow
+from app.schemas.credits import CastMember
 from app.services.tmdb_client import TMDBClient
 
 
@@ -60,6 +61,10 @@ class SeasonResponse(BaseModel):
 
 class ShowDetailResponse(ShowResponse):
     seasons: list[SeasonResponse]
+    cast: list[CastMember] = []
+    # Total cast available for this title before the slice. Lets the client
+    # decide whether to render a "See all" affordance.
+    total_cast_count: int = 0
 
     @classmethod
     def from_model(
@@ -67,7 +72,24 @@ class ShowDetailResponse(ShowResponse):
         s: TVShow,
         tmdb_client: TMDBClient,
         imdb_ratings: dict[str, float] | None = None,
+        cast_limit: int = 50,
     ):
+        # Show-level cast comes from /aggregate_credits, ordered by how many
+        # episodes the actor appeared in (most prominent first), with TMDB
+        # billing as the secondary tiebreaker.
+        sorted_credits = sorted(
+            s.credits,
+            key=lambda c: (
+                -(c.episode_count or 0),
+                c.cast_order is None,
+                c.cast_order or 0,
+            ),
+        )
+        cast = [
+            CastMember.from_credit(c, tmdb_client)
+            for c in sorted_credits[:cast_limit]
+        ]
+
         seasons_data = []
 
         for season in s.seasons:
@@ -133,4 +155,6 @@ class ShowDetailResponse(ShowResponse):
             else None,
             seasons=seasons_data,
             library_status=s.library_status,
+            cast=cast,
+            total_cast_count=len(s.credits),
         )

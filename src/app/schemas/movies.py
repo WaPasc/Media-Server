@@ -2,6 +2,7 @@ from pydantic import BaseModel
 
 from app.core.s3 import s3_client
 from app.models.media import Movie
+from app.schemas.credits import CastMember
 from app.services.tmdb_client import TMDBClient
 
 
@@ -65,4 +66,37 @@ class MovieResponse(BaseModel):
             is_completed=completed,
             library_status=m.library_status,
             imdb_rating=rating,
+        )
+
+
+class MovieDetailResponse(MovieResponse):
+    cast: list[CastMember] = []
+    # Total cast available for this title before the slice. Lets the client
+    # decide whether to render a "See all" affordance.
+    total_cast_count: int = 0
+
+    @classmethod
+    def from_model(
+        cls,
+        m: Movie,
+        tmdb_client: TMDBClient,
+        imdb_ratings: dict[str, float] | None = None,
+        cast_limit: int = 50,
+    ):
+        base = MovieResponse.from_model(m, tmdb_client, imdb_ratings)
+
+        # cast_order is TMDB billing, low = top-billed; NULLs sink.
+        sorted_credits = sorted(
+            m.credits,
+            key=lambda c: (c.cast_order is None, c.cast_order or 0),
+        )
+        cast = [
+            CastMember.from_credit(c, tmdb_client)
+            for c in sorted_credits[:cast_limit]
+        ]
+
+        return cls(
+            **base.model_dump(),
+            cast=cast,
+            total_cast_count=len(sorted_credits),
         )

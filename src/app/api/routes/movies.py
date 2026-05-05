@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.dependencies import get_db, get_tmdb_client
-from app.schemas.movies import MovieResponse
+from app.api.dependencies import CastLimit, get_db, get_tmdb_client
+from app.schemas.movies import MovieDetailResponse, MovieResponse
 from app.services.imdb_dataset_service import get_ratings_for_imdb_ids
 from app.services.movie_service import (
     get_all_movies,
@@ -34,6 +34,7 @@ async def get_movies(
 @router.get('/movie/{movie_id}')
 async def get_movie_details(
     movie_id: int,
+    cast_limit: CastLimit = 50,
     db: AsyncSession = Depends(get_db),
     tmdb_client: TMDBClient = Depends(get_tmdb_client),
 ):
@@ -48,7 +49,7 @@ async def get_movie_details(
         await get_ratings_for_imdb_ids(db, [movie.imdb_id]) if movie.imdb_id else {}
     )
 
-    return MovieResponse.from_model(movie, tmdb_client, ratings)
+    return MovieDetailResponse.from_model(movie, tmdb_client, ratings, cast_limit)
 
 
 @router.post('/movies/{movie_id}/refresh')

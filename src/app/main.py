@@ -5,7 +5,16 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import admin, history, movies, progress, scanner, shows, stream
+from app.api.routes import (
+    admin,
+    episodes,
+    history,
+    movies,
+    progress,
+    scanner,
+    shows,
+    stream,
+)
 from app.core.s3 import s3_client
 from app.services.imdb_dataset_service import refresh_if_stale as imdb_refresh_if_stale
 from app.services.scanner_service import run_grace_period_loop
@@ -54,6 +63,7 @@ app.add_middleware(
 
 app.include_router(shows.router)
 app.include_router(movies.router)
+app.include_router(episodes.router)
 app.include_router(stream.router)
 app.include_router(progress.router)
 app.include_router(scanner.router)
