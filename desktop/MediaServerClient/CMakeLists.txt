@@ -39,6 +39,7 @@ qt_add_qml_module(appMediaServerClient
         AddDirectoryCard.qml
         PlayerControls.qml
         RatingBadge.qml
+        CastStrip.qml
 
     SOURCES
         MpvItem.h

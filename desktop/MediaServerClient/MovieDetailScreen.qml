@@ -20,6 +20,8 @@ Item {
     property string backdropFallbackUrl: ""
     property string overview: ""
     property int fileId: -1
+    property var castModel: []
+    property int totalCastCount: 0
 
     function formatRuntime(min) {
         if (!min || min <= 0) return "";
@@ -41,7 +43,7 @@ Item {
         }
     }
 
-    function loadMovieDetails() {
+    function loadMovieDetails(castLimit) {
         movieTitle = ""
         movieYear = ""
         movieRuntime = 0
@@ -50,8 +52,15 @@ Item {
         backdropFallbackUrl = ""
         overview = ""
         fileId = -1
+        castModel = []
+        totalCastCount = 0
 
-        API.get("/api/movie/" + movieId).then(function (data) {
+        let url = "/api/movie/" + movieId;
+        if (castLimit && castLimit > 50) {
+            url += "?cast_limit=" + castLimit;
+        }
+
+        API.get(url).then(function (data) {
             movieTitle = data.title || "";
             movieYear = data.year ? data.year.toString() : "Unknown Year";
             movieRuntime = data.runtime || 0;
@@ -60,6 +69,8 @@ Item {
             backdropFallbackUrl = data.backdrop_url_fallback || "";
             overview = data.overview || "No overview available for this title.";
             fileId = data.file_id || -1;
+            castModel = data.cast || [];
+            totalCastCount = data.total_cast_count || 0;
         }).catch(function (error) {
             console.error("Failed to load movie details:", error);
         });
@@ -330,6 +341,23 @@ Item {
                         wrapMode: Text.WordWrap
                         lineHeight: 1.4
                     }
+                }
+            }
+
+            Item {
+                width: 1
+                height: 32
+            }
+
+            CastStrip {
+                width: parent.width
+                castModel: root.castModel
+                totalCastCount: root.totalCastCount
+
+                onSeeAllRequested: {
+                    // Re-fetch the full list, then expand the strip in place.
+                    root.loadMovieDetails(5000);
+                    expanded = true;
                 }
             }
 

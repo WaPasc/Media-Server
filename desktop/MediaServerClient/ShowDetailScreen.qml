@@ -19,6 +19,8 @@ Item {
     property var rawShowData: null
     property int savedSeasonIndex: 0
     property var nextEpisode: null
+    property var castModel: []
+    property int totalCastCount: 0
 
     ListModel {
         id: seasonModel
@@ -48,21 +50,30 @@ Item {
         }
     }
 
-    function loadShowDetails() {
+    function loadShowDetails(castLimit) {
         showTitle = ""
         backdropUrl = ""
         backdropFallbackUrl = ""
         overview = ""
         rawShowData = null
+        castModel = []
+        totalCastCount = 0
         seasonModel.clear()
         episodeModel.clear()
 
-        API.get("/api/show/" + showId).then(function (data) {
+        let url = "/api/show/" + showId;
+        if (castLimit && castLimit > 50) {
+            url += "?cast_limit=" + castLimit;
+        }
+
+        API.get(url).then(function (data) {
             rawShowData = data;
             showTitle = rawShowData.title;
             backdropUrl = rawShowData.backdrop_url || "";
             backdropFallbackUrl = rawShowData.backdrop_url_fallback || "";
             overview = rawShowData.overview || "No overview available for this show.";
+            castModel = rawShowData.cast || [];
+            totalCastCount = rawShowData.total_cast_count || 0;
 
             calculateNextEpisode();
 
@@ -654,6 +665,27 @@ Item {
                             }
                         }
                     }
+                }
+            }
+
+            Item {
+                width: 1
+                height: 40
+            }
+
+            CastStrip {
+                width: parent.width
+                castModel: root.castModel
+                totalCastCount: root.totalCastCount
+
+                onSeeAllRequested: {
+                    // Re-fetch the full list, then expand the strip in place.
+                    // Preserve the currently-displayed season so the user does
+                    // not lose their place after the data round-trip.
+                    let stash = root.savedSeasonIndex;
+                    root.loadShowDetails(5000);
+                    root.savedSeasonIndex = stash;
+                    expanded = true;
                 }
             }
 
