@@ -53,6 +53,7 @@ services:
       - POSTGRES_URL=${POSTGRES_URL}
     volumes:
       - ${MEDIA_PATH}:${MEDIA_PATH}
+      - ${MEDIA_USB}:${MEDIA_USB_C} # Added this for attaching an external drive
       - ./app_data:/app/data
     depends_on:
       database_postgres:
