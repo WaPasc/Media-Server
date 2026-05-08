@@ -50,7 +50,7 @@ Item {
         }
     }
 
-    function loadShowDetails(castLimit) {
+    function loadShowDetails() {
         showTitle = ""
         backdropUrl = ""
         backdropFallbackUrl = ""
@@ -61,12 +61,7 @@ Item {
         seasonModel.clear()
         episodeModel.clear()
 
-        let url = "/api/show/" + showId;
-        if (castLimit && castLimit > 50) {
-            url += "?cast_limit=" + castLimit;
-        }
-
-        API.get(url).then(function (data) {
+        API.get("/api/show/" + showId).then(function (data) {
             rawShowData = data;
             showTitle = rawShowData.title;
             backdropUrl = rawShowData.backdrop_url || "";
@@ -99,6 +94,17 @@ Item {
             }
         }).catch(function (error) {
             console.error("Failed to load show details:", error);
+        });
+    }
+
+    // Fetches the full cast list without touching the rest of the screen.
+    // Used by CastStrip's "See all" so the page does not blank/repaint.
+    function loadFullCast() {
+        API.get("/api/show/" + showId + "?cast_limit=5000").then(function (data) {
+            castModel = data.cast || [];
+            totalCastCount = data.total_cast_count || 0;
+        }).catch(function (error) {
+            console.error("Failed to load full cast:", error);
         });
     }
 
@@ -679,12 +685,9 @@ Item {
                 totalCastCount: root.totalCastCount
 
                 onSeeAllRequested: {
-                    // Re-fetch the full list, then expand the strip in place.
-                    // Preserve the currently-displayed season so the user does
-                    // not lose their place after the data round-trip.
-                    let stash = root.savedSeasonIndex;
-                    root.loadShowDetails(5000);
-                    root.savedSeasonIndex = stash;
+                    // Only refetch the cast — leave the rest of the screen
+                    // (backdrop, episodes, season state) untouched.
+                    root.loadFullCast();
                     expanded = true;
                 }
             }

@@ -43,7 +43,7 @@ Item {
         }
     }
 
-    function loadMovieDetails(castLimit) {
+    function loadMovieDetails() {
         movieTitle = ""
         movieYear = ""
         movieRuntime = 0
@@ -55,12 +55,7 @@ Item {
         castModel = []
         totalCastCount = 0
 
-        let url = "/api/movie/" + movieId;
-        if (castLimit && castLimit > 50) {
-            url += "?cast_limit=" + castLimit;
-        }
-
-        API.get(url).then(function (data) {
+        API.get("/api/movie/" + movieId).then(function (data) {
             movieTitle = data.title || "";
             movieYear = data.year ? data.year.toString() : "Unknown Year";
             movieRuntime = data.runtime || 0;
@@ -73,6 +68,17 @@ Item {
             totalCastCount = data.total_cast_count || 0;
         }).catch(function (error) {
             console.error("Failed to load movie details:", error);
+        });
+    }
+
+    // Fetches the full cast list without touching the rest of the screen.
+    // Used by CastStrip's "See all" so the page does not blank/repaint.
+    function loadFullCast() {
+        API.get("/api/movie/" + movieId + "?cast_limit=5000").then(function (data) {
+            castModel = data.cast || [];
+            totalCastCount = data.total_cast_count || 0;
+        }).catch(function (error) {
+            console.error("Failed to load full cast:", error);
         });
     }
 
@@ -355,8 +361,9 @@ Item {
                 totalCastCount: root.totalCastCount
 
                 onSeeAllRequested: {
-                    // Re-fetch the full list, then expand the strip in place.
-                    root.loadMovieDetails(5000);
+                    // Only refetch the cast — leave title/backdrop/overview untouched
+                    // so the screen does not blank/repaint.
+                    root.loadFullCast();
                     expanded = true;
                 }
             }
