@@ -30,8 +30,16 @@ Rectangle {
         id: castDelegate
 
         Item {
+            id: castCell
             width: 110
             height: 180
+
+            scale: castMouse.containsMouse ? 1.05 : 1.0
+            Behavior on scale {
+                NumberAnimation {
+                    duration: 120
+                }
+            }
 
             Column {
                 anchors.fill: parent
@@ -117,6 +125,20 @@ Rectangle {
                     wrapMode: Text.WordWrap
                     maximumLineCount: 2
                     elide: Text.ElideRight
+                }
+            }
+
+            MouseArea {
+                id: castMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                    if (modelData.tmdb_person_id) {
+                        Qt.openUrlExternally(
+                            "https://www.themoviedb.org/person/" + modelData.tmdb_person_id
+                        );
+                    }
                 }
             }
         }
