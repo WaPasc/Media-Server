@@ -10,8 +10,6 @@
 ## Data Lifecycle & Backup
 - [ ] Restore-on-readd: when a previously removed show/movie reappears, automatically rebind history (watched episodes, progress, ratings, metadata). *(Foundation now in place — WatchProgress anchors on Movie/Episode, so re-adding a file naturally rebinds. Still need: scanner-side reconciliation pass + UI affordance.)*
 
-## UI / Metadata
-- [ ] Show cast and crew on detail screens.
 
 ## Web Application
 - [ ] Update the web application to use all the new features and improvements from the backend, ensuring a seamless user experience across both platforms.
